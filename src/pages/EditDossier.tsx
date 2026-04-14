@@ -13,9 +13,10 @@ export const EditDossier = () => {
   const [originalDossier, setOriginalDossier] = useState<any>(null);
 
   const [formData, setFormData] = useState({
-    tracking_code: '',
+    type_dossier: 'Arrivée',
     objet: '',
     expediteur: '',
+    numero_expediteur: '',
     date_arrivee: '',
     numero_enregistrement: '',
     numero_orientation: '',
@@ -50,9 +51,10 @@ export const EditDossier = () => {
           } else {
             setOriginalDossier(foundDossier);
             setFormData({
-              tracking_code: foundDossier.tracking_code || '',
+              type_dossier: foundDossier.type_dossier || 'Arrivée',
               objet: foundDossier.objet || '',
               expediteur: foundDossier.expediteur || '',
+              numero_expediteur: foundDossier.numero_expediteur || '',
               date_arrivee: foundDossier.date_arrivee || '',
               numero_enregistrement: foundDossier.numero_enregistrement || '',
               numero_orientation: foundDossier.numero_orientation || '',
@@ -91,7 +93,7 @@ export const EditDossier = () => {
           await supabase.from('notifications').insert([
             {
               bureau_id: bureauId,
-              message: `Dossier ${originalDossier.tracking_code} passé en "${formData.statut}"`,
+              message: `Dossier "${originalDossier.numero_enregistrement || originalDossier.objet}" passé en "${formData.statut}"`,
               read: false
             }
           ]);
@@ -107,7 +109,15 @@ export const EditDossier = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      // Auto-fill numero_orientation with numero_enregistrement when switching to Départ if empty
+      if (name === 'type_dossier' && value === 'Départ' && !prev.numero_orientation && prev.numero_enregistrement) {
+        newData.numero_orientation = prev.numero_enregistrement;
+      }
+      return newData;
+    });
   };
 
   if (initialLoading) {
@@ -129,7 +139,7 @@ export const EditDossier = () => {
             <div>
               <h1 className="text-3xl font-black tracking-tight">Modifier le Dossier</h1>
               <p className="mt-2 text-blue-100 font-medium">
-                Mise à jour des informations pour le dossier <span className="font-bold text-white">{originalDossier?.tracking_code}</span>
+                Mise à jour des informations pour le dossier <span className="font-bold text-white">{originalDossier?.numero_enregistrement || originalDossier?.objet}</span>
               </p>
             </div>
             <div className="hidden sm:block">
@@ -144,19 +154,20 @@ export const EditDossier = () => {
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="grid grid-cols-1 gap-y-8 gap-x-6 sm:grid-cols-2">
               
-              <div>
-                <label htmlFor="tracking_code" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Code de suivi <span className="text-red-500">*</span>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-3">
+                  Type de dossier <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  name="tracking_code"
-                  id="tracking_code"
-                  required
-                  value={formData.tracking_code}
-                  onChange={handleChange}
-                  className="block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all"
-                />
+                <div className="flex space-x-4">
+                  <label className={`flex-1 flex items-center justify-center px-4 py-4 rounded-xl border-2 cursor-pointer transition-all ${formData.type_dossier === 'Arrivée' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-blue-200'}`}>
+                    <input type="radio" name="type_dossier" value="Arrivée" checked={formData.type_dossier === 'Arrivée'} onChange={handleChange} className="sr-only" />
+                    <span className="font-black text-lg">Arrivée</span>
+                  </label>
+                  <label className={`flex-1 flex items-center justify-center px-4 py-4 rounded-xl border-2 cursor-pointer transition-all ${formData.type_dossier === 'Départ' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-blue-200'}`}>
+                    <input type="radio" name="type_dossier" value="Départ" checked={formData.type_dossier === 'Départ'} onChange={handleChange} className="sr-only" />
+                    <span className="font-black text-lg">Départ</span>
+                  </label>
+                </div>
               </div>
 
               <div>
@@ -190,13 +201,44 @@ export const EditDossier = () => {
               </div>
 
               <div>
+                <label htmlFor="expediteur" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
+                  Expéditeur (Service) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="expediteur"
+                  id="expediteur"
+                  required
+                  value={formData.expediteur}
+                  onChange={handleChange}
+                  className="block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="numero_expediteur" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
+                  N° Service <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="numero_expediteur"
+                  id="numero_expediteur"
+                  required
+                  value={formData.numero_expediteur}
+                  onChange={handleChange}
+                  className="block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all"
+                />
+              </div>
+
+              <div>
                 <label htmlFor="numero_enregistrement" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Numéro d'enregistrement
+                  Numéro d'enregistrement <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="numero_enregistrement"
                   id="numero_enregistrement"
+                  required
                   value={formData.numero_enregistrement}
                   onChange={handleChange}
                   className="block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all"
@@ -223,29 +265,53 @@ export const EditDossier = () => {
 
               <div className="sm:col-span-2">
                 <label htmlFor="orientation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Orientation (Service)
+                  Orientation (Service) {formData.type_dossier === 'Départ' && <span className="text-red-500">*</span>}
                 </label>
                 <input
                   type="text"
                   name="orientation"
                   id="orientation"
+                  required={formData.type_dossier === 'Départ'}
+                  disabled={formData.type_dossier !== 'Départ'}
                   value={formData.orientation}
                   onChange={handleChange}
-                  className="block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all"
+                  className={`block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all ${formData.type_dossier !== 'Départ' ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`}
                 />
               </div>
 
               <div className="sm:col-span-2">
+                <label htmlFor="numero_orientation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
+                  Numéro d'Orientation
+                </label>
+                <input
+                  type="text"
+                  name="numero_orientation"
+                  id="numero_orientation"
+                  disabled={formData.type_dossier !== 'Départ'}
+                  value={formData.numero_orientation}
+                  onChange={handleChange}
+                  className={`block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all ${formData.type_dossier !== 'Départ' ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`}
+                />
+                {formData.type_dossier === 'Départ' && (
+                  <p className="mt-1.5 text-[10px] text-gray-500 font-medium italic">
+                    Même numéro que l'enregistrement (interne) ou nouveau numéro (externe).
+                  </p>
+                )}
+              </div>
+
+              <div className="sm:col-span-2">
                 <label htmlFor="annotation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Annotation
+                  Annotation {formData.type_dossier === 'Départ' && <span className="text-red-500">*</span>}
                 </label>
                 <textarea
                   id="annotation"
                   name="annotation"
+                  required={formData.type_dossier === 'Départ'}
+                  disabled={formData.type_dossier !== 'Départ'}
                   rows={3}
                   value={formData.annotation}
                   onChange={handleChange}
-                  className="block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all"
+                  className={`block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all resize-none ${formData.type_dossier !== 'Départ' ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`}
                 />
               </div>
 
@@ -256,10 +322,11 @@ export const EditDossier = () => {
                 <textarea
                   id="observation"
                   name="observation"
+                  disabled={formData.type_dossier !== 'Départ'}
                   rows={2}
                   value={formData.observation}
                   onChange={handleChange}
-                  className="block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all"
+                  className={`block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all resize-none ${formData.type_dossier !== 'Départ' ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`}
                 />
               </div>
             </div>

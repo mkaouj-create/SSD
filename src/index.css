@@ -1,1 +1,38 @@
 @import "tailwindcss";
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  @apply antialiased text-gray-900 bg-gray-50;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom scrollbar for better mobile feel */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-200 rounded-full;
+}
+
+input, select, textarea {
+  font-size: 16px !important; /* Prevent iOS zoom on focus */
+}

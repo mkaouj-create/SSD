@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2 } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -69,6 +69,7 @@ export const Layout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Dossiers', href: '/dossiers', icon: FolderOpen },
+    { name: 'Nouveau', href: '/dossiers/new', icon: Plus, mobileOnly: true },
     { name: 'Utilisateurs', href: '/users', icon: Users },
     { name: 'Paramètres', href: '/settings', icon: Settings },
   ];
@@ -142,21 +143,85 @@ export const Layout = () => {
       </div>
 
       {/* Mobile header */}
-      <div className="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-white shadow-sm border-b border-gray-100 md:hidden">
-        <button
-          type="button"
-          className="px-4 text-gray-500 focus:outline-none md:hidden"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          <span className="sr-only">Open sidebar</span>
-          <Menu className="h-6 w-6" aria-hidden="true" />
-        </button>
-        <div className="flex flex-1 items-center px-4">
-          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center mr-2">
+      <div className="sticky top-0 z-20 flex h-14 flex-shrink-0 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 md:hidden items-center justify-between px-4">
+        <div className="flex items-center">
+          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center mr-2 shadow-md shadow-blue-100">
             <span className="text-white font-black text-sm">S</span>
           </div>
-          <h1 className="text-xl font-black text-gray-900 tracking-tighter">SSD</h1>
+          <h1 className="text-lg font-black text-gray-900 tracking-tighter">SSD</h1>
         </div>
+        
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={handleNotificationClick}
+            className="relative p-2 text-gray-400 hover:text-blue-600 focus:outline-none transition-all"
+          >
+            <Bell className="h-5 w-5" aria-hidden="true" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+            )}
+          </button>
+          
+          <button
+            type="button"
+            className="p-2 text-gray-500 focus:outline-none"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <Menu className="h-6 w-6" aria-hidden="true" />
+          </button>
+        </div>
+
+        {/* Mobile Notifications Dropdown */}
+        {showNotifications && (
+          <div className="absolute right-4 top-14 mt-2 w-72 origin-top-right rounded-2xl bg-white py-2 shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-gray-100">
+            <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-xs font-black uppercase tracking-widest text-gray-900">Notifications</h3>
+              <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-gray-600">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="max-h-64 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="px-4 py-6 text-center text-xs text-gray-400 font-medium italic">Aucune notification</div>
+              ) : (
+                notifications.map((notif) => (
+                  <div key={notif.id} className={`px-4 py-3 border-b border-gray-50 last:border-0 ${!notif.read ? 'bg-blue-50/50' : ''}`}>
+                    <p className="text-xs text-gray-800 font-medium leading-relaxed">{notif.message}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 font-bold">
+                      {new Date(notif.created_at).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Navigation for Mobile */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-lg border-t border-gray-100 px-2 pb-safe-area-inset-bottom">
+        <nav className="flex items-center justify-around h-16">
+          {navigation.filter(item => !['Rôles', 'Demandes', 'Bureaux'].includes(item.name)).map((item) => {
+            const isActive = location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`flex flex-col items-center justify-center flex-1 min-w-0 py-1 transition-all ${
+                  isActive ? 'text-blue-600' : 'text-gray-400'
+                }`}
+              >
+                <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-blue-50' : ''}`}>
+                  <item.icon className={`h-5 w-5 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                </div>
+                <span className={`text-[10px] font-black uppercase tracking-tighter mt-1 truncate w-full text-center ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+                  {item.name}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
 
       {/* Mobile menu */}
@@ -206,7 +271,7 @@ export const Layout = () => {
       )}
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col md:pl-72">
+      <div className="flex flex-1 flex-col md:pl-72 pb-20 md:pb-0">
         {/* Top header for desktop notifications */}
         <div className="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-gray-100 justify-end px-8 hidden md:flex">
           <div className="flex items-center relative">

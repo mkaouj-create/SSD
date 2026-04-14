@@ -113,10 +113,16 @@ export const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-500 font-medium">Chargement des statistiques...</p>
+      <div className="space-y-6">
+        <div className="h-8 w-48 bg-gray-100 rounded-lg animate-pulse"></div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-24 bg-gray-100 rounded-3xl animate-pulse"></div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="h-80 bg-gray-100 rounded-3xl animate-pulse"></div>
+          <div className="h-80 bg-gray-100 rounded-3xl animate-pulse"></div>
         </div>
       </div>
     );
@@ -160,20 +166,20 @@ export const Dashboard = () => {
         )}
       </div>
       
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8">
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8">
         {statCards.map((item) => (
-          <div key={item.name} className="overflow-hidden rounded-3xl bg-white shadow-sm border border-gray-100 hover:shadow-md transition-all transform hover:-translate-y-1">
-            <div className="p-5">
+          <div key={item.name} className="overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-sm border border-gray-100 hover:shadow-md transition-all">
+            <div className="p-3 sm:p-5">
               <div className="flex items-center justify-between">
-                <div className={`rounded-2xl p-3 ${item.bg}`}>
-                  <item.icon className={`h-6 w-6 ${item.color}`} aria-hidden="true" />
+                <div className={`rounded-xl sm:rounded-2xl p-2 sm:p-3 ${item.bg}`}>
+                  <item.icon className="h-4 w-4 sm:h-6 sm:w-6 text-current" aria-hidden="true" />
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-black text-gray-900">{item.value}</div>
+                  <div className="text-xl sm:text-3xl font-black text-gray-900">{item.value}</div>
                 </div>
               </div>
-              <div className="mt-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">{item.name}</p>
+              <div className="mt-2 sm:mt-4">
+                <p className="text-[9px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest truncate">{item.name}</p>
               </div>
             </div>
           </div>

@@ -18,12 +18,10 @@ export const DossierDetails = () => {
   const navigate = useNavigate();
   const [dossier, setDossier] = useState<any>(null);
   const [transmissions, setTransmissions] = useState<any[]>([]);
-  const [comments, setComments] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [newComment, setNewComment] = useState('');
 
   const [showTransmitModal, setShowTransmitModal] = useState(false);
   const [isTransmitting, setIsTransmitting] = useState(false);
@@ -87,7 +85,7 @@ export const DossierDetails = () => {
       await supabase.from('notifications').insert([
         {
           bureau_id: transmissionData.destination_bureau_id,
-          message: `Nouveau dossier transmis : ${dossier.tracking_code} (Urgence: ${transmissionData.niveau})`,
+          message: `Nouveau dossier transmis : ${dossier.numero_enregistrement || dossier.objet} (Urgence: ${transmissionData.niveau})`,
           type: 'transmission',
           read: false
         }
@@ -109,10 +107,9 @@ export const DossierDetails = () => {
     if (!id) return;
 
     try {
-      const [dossierRes, transRes, commentRes, logRes] = await Promise.all([
+      const [dossierRes, transRes, logRes] = await Promise.all([
         supabase.from('dossiers').select('*').eq('id', id).single(),
         supabase.from('transmissions').select('*').eq('dossier_id', id).order('date_transmission', { ascending: false }),
-        supabase.from('comments').select('*').eq('dossier_id', id).order('created_at', { ascending: false }),
         supabase.from('audit_logs').select('*').eq('dossier_id', id).order('created_at', { ascending: false })
       ]);
 
@@ -130,7 +127,6 @@ export const DossierDetails = () => {
       }
 
       setTransmissions(transRes.data || []);
-      setComments(commentRes.data || []);
       setAuditLogs(logRes.data || []);
 
     } catch (error) {
@@ -149,7 +145,6 @@ export const DossierDetails = () => {
       .channel(`dossier_${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dossiers', filter: `id=eq.${id}` }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transmissions', filter: `dossier_id=eq.${id}` }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `dossier_id=eq.${id}` }, () => fetchData())
       .subscribe();
 
     return () => {
@@ -177,30 +172,6 @@ export const DossierDetails = () => {
     }
   };
 
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim() || !id || !user) return;
-
-    try {
-      const { error } = await supabase
-        .from('comments')
-        .insert([
-          {
-            dossier_id: id,
-            user_id: user.id,
-            user_name: role || 'Utilisateur',
-            content: newComment
-          }
-        ]);
-
-      if (error) throw error;
-      setNewComment('');
-      fetchData();
-    } catch (error) {
-      console.error('Error adding comment:', error);
-    }
-  };
-
   if (loading) {
     return <div className="animate-pulse">Chargement des détails du dossier...</div>;
   }
@@ -222,7 +193,7 @@ export const DossierDetails = () => {
               <h3 className="text-xl font-black tracking-tight">Supprimer le dossier ?</h3>
             </div>
             <p className="text-gray-600 leading-relaxed">
-              Êtes-vous sûr de vouloir supprimer le dossier <span className="font-bold text-gray-900">{dossier.tracking_code}</span> ? Cette action effacera définitivement toutes les données associées.
+              Êtes-vous sûr de vouloir supprimer le dossier <span className="font-bold text-gray-900">{dossier.numero_enregistrement || dossier.objet}</span> ? Cette action effacera définitivement toutes les données associées.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <button
@@ -286,9 +257,9 @@ export const DossierDetails = () => {
               <div>
                 <div className="flex items-center gap-3 mb-1">
                   <FileText className="h-5 w-5 text-blue-400" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Détails du dossier</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Dossier {dossier.type_dossier || 'Arrivée'}</span>
                 </div>
-                <h1 className="text-2xl font-black tracking-tight">{dossier.tracking_code}</h1>
+                <h1 className="text-2xl font-black tracking-tight">{dossier.numero_enregistrement || 'Sans numéro'}</h1>
               </div>
               <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border ${statusColors[dossier.statut] || 'bg-gray-700 text-gray-300 border-gray-600'}`}>
                 {dossier.statut}
@@ -298,13 +269,18 @@ export const DossierDetails = () => {
             <div className="p-8">
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-8">
                 <div className="sm:col-span-2">
-                  <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Objet</dt>
-                  <dd className="text-lg font-bold text-gray-900 leading-tight">{dossier.objet}</dd>
+                  <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Numéro d'enregistrement</dt>
+                  <dd className="text-lg font-bold text-gray-900 leading-tight">{dossier.numero_enregistrement || 'Non spécifié'}</dd>
                 </div>
                 
                 <div>
-                  <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Expéditeur</dt>
+                  <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Expéditeur (Service)</dt>
                   <dd className="text-sm font-semibold text-gray-700">{dossier.expediteur || 'Non spécifié'}</dd>
+                </div>
+
+                <div>
+                  <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">N° Service</dt>
+                  <dd className="text-sm font-semibold text-gray-700">{dossier.numero_expediteur || '-'}</dd>
                 </div>
                 
                 <div>
@@ -323,6 +299,11 @@ export const DossierDetails = () => {
                   <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Orientation</dt>
                   <dd className="text-sm font-semibold text-gray-700">{dossier.orientation || '-'}</dd>
                 </div>
+
+                <div>
+                  <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Numéro d'Orientation</dt>
+                  <dd className="text-sm font-semibold text-gray-700">{dossier.numero_orientation || '-'}</dd>
+                </div>
                 
                 <div className="sm:col-span-2 pt-6 border-t border-gray-50">
                   <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Annotation</dt>
@@ -340,75 +321,6 @@ export const DossierDetails = () => {
               </dl>
             </div>
           </div>
-
-          {/* Comments Section */}
-          {(hasPermission('manage_dossiers') || hasPermission('view_dossiers')) && (
-            <div className="bg-white shadow-xl rounded-3xl overflow-hidden border border-gray-100">
-              <div className="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
-                <div className="flex items-center">
-                  <MessageSquare className="h-5 w-5 text-blue-600 mr-3" />
-                  <h3 className="text-lg font-black text-gray-900 tracking-tight">Notes internes</h3>
-                </div>
-                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                  {comments.length}
-                </span>
-              </div>
-              
-              <div className="p-8">
-                <div className="space-y-8 mb-10">
-                  {comments.length === 0 ? (
-                    <div className="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                      <p className="text-sm text-gray-400 font-medium italic">Aucun commentaire pour le moment.</p>
-                    </div>
-                  ) : (
-                    comments.map((comment) => (
-                      <div key={comment.id} className="flex gap-4">
-                        <div className="flex-shrink-0">
-                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center border border-white shadow-sm">
-                            <User className="h-5 w-5 text-gray-500" />
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-bold text-gray-900 capitalize">{comment.user_name}</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                              {format(new Date(comment.created_at), "dd/MM/yyyy HH:mm")}
-                            </span>
-                          </div>
-                          <div className="text-sm text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-2xl rounded-tl-none border border-gray-100">
-                            {comment.content}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                
-                {hasPermission('manage_dossiers') && (
-                  <form onSubmit={handleAddComment} className="relative">
-                    <textarea
-                      id="comment"
-                      name="comment"
-                      rows={3}
-                      className="block w-full rounded-2xl border-gray-200 py-4 px-5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 border transition-all resize-none"
-                      placeholder="Ajouter une note pour vos collègues..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      required
-                    />
-                    <div className="mt-4 flex justify-end">
-                      <button
-                        type="submit"
-                        className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5"
-                      >
-                        Publier la note
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Right Column: History & Transmissions */}

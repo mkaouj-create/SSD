@@ -11,6 +11,7 @@ export const DossiersList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('Arrivée');
   const [statusFilter, setStatusFilter] = useState('');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
@@ -91,11 +92,15 @@ export const DossiersList = () => {
     };
   }, [bureauId, statusFilter, dateStart, dateEnd, role, user?.id]);
 
-  const filteredDossiers = dossiers.filter(d => 
-    d.tracking_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.objet.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (d.expediteur && d.expediteur.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredDossiers = dossiers.filter(d => {
+    const matchesTab = (d.type_dossier || 'Arrivée') === activeTab;
+    const matchesSearch = 
+      (d.numero_enregistrement && d.numero_enregistrement.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      d.objet.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (d.expediteur && d.expediteur.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    return matchesTab && matchesSearch;
+  });
 
   const statusColors: Record<string, string> = {
     'Reçu': 'bg-gray-100 text-gray-800',
@@ -126,6 +131,21 @@ export const DossiersList = () => {
         )}
       </div>
 
+      <div className="flex space-x-2 mb-6">
+        <button
+          onClick={() => setActiveTab('Arrivée')}
+          className={`px-6 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'Arrivée' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+        >
+          Dossiers Arrivée
+        </button>
+        <button
+          onClick={() => setActiveTab('Départ')}
+          className={`px-6 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'Départ' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+        >
+          Dossiers Départ
+        </button>
+      </div>
+
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8 flex flex-col lg:flex-row gap-4">
         <div className="relative flex-1 group">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -134,7 +154,7 @@ export const DossiersList = () => {
           <input
             type="text"
             className="block w-full rounded-xl border-gray-200 py-2.5 pl-10 pr-3 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all"
-            placeholder="Rechercher par code, objet ou expéditeur..."
+            placeholder="Rechercher par n° d'enregistrement, objet ou expéditeur..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -178,98 +198,147 @@ export const DossiersList = () => {
       </div>
 
       <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
-        <div className="overflow-x-auto">
-          {error ? (
-            <div className="p-12 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
-                <Filter className="h-8 w-8 text-red-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Erreur de chargement</h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">{error}</p>
-              <button
-                onClick={() => fetchDossiers()}
-                className="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all"
-              >
-                Réessayer
-              </button>
+        {error ? (
+          <div className="p-12 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+              <Filter className="h-8 w-8 text-red-600" />
             </div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  Code de suivi
-                </th>
-                <th scope="col" className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  Objet
-                </th>
-                <th scope="col" className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  Expéditeur
-                </th>
-                <th scope="col" className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  Date d'arrivée
-                </th>
-                <th scope="col" className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  Statut
-                </th>
-                <th scope="col" className="relative px-8 py-5">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Erreur de chargement</h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">{error}</p>
+            <button
+              onClick={() => fetchDossiers()}
+              className="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all"
+            >
+              Réessayer
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      N° Enregistrement
+                    </th>
+                    <th scope="col" className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Objet
+                    </th>
+                    <th scope="col" className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Expéditeur (Service)
+                    </th>
+                    <th scope="col" className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Date d'arrivée
+                    </th>
+                    <th scope="col" className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Statut
+                    </th>
+                    <th scope="col" className="relative px-8 py-5">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="px-8 py-5"><div className="h-8 w-24 bg-gray-100 rounded-xl"></div></td>
+                        <td className="px-8 py-5"><div className="h-4 w-48 bg-gray-100 rounded-lg"></div></td>
+                        <td className="px-8 py-5"><div className="h-4 w-32 bg-gray-100 rounded-lg"></div></td>
+                        <td className="px-8 py-5"><div className="h-4 w-20 bg-gray-100 rounded-lg"></div></td>
+                        <td className="px-8 py-5"><div className="h-6 w-16 bg-gray-100 rounded-full"></div></td>
+                        <td className="px-8 py-5"><div className="h-8 w-20 bg-gray-100 rounded-xl"></div></td>
+                      </tr>
+                    ))
+                  ) : filteredDossiers.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-8 py-20 text-center text-gray-400 font-medium italic">
+                        Aucun dossier trouvé.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredDossiers.map((dossier) => (
+                      <tr key={dossier.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-8 py-5 whitespace-nowrap">
+                          <span className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 shadow-sm">
+                            {dossier.numero_enregistrement || '-'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 font-bold tracking-tight">
+                            {dossier.objet.length > 40 ? `${dossier.objet.substring(0, 40)}...` : dossier.objet}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-600">{dossier.expediteur || '-'}</div>
+                        </td>
+                        <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-gray-400">
+                          {format(new Date(dossier.date_arrivee), 'dd/MM/yyyy')}
+                        </td>
+                        <td className="px-8 py-5 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${statusColors[dossier.statut] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                            {dossier.statut}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
+                          <Link to={`/dossiers/${dossier.id}`} className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all">
+                            Détails
+                            <Plus className="ml-1.5 h-3 w-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden divide-y divide-gray-100">
               {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center">
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-                      <span className="text-sm font-bold text-gray-500">Chargement des dossiers...</span>
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="p-5 animate-pulse space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="h-8 w-24 bg-gray-100 rounded-xl"></div>
+                      <div className="h-6 w-16 bg-gray-100 rounded-full"></div>
                     </div>
-                  </td>
-                </tr>
+                    <div className="h-4 w-full bg-gray-100 rounded-lg"></div>
+                    <div className="h-4 w-2/3 bg-gray-100 rounded-lg"></div>
+                  </div>
+                ))
               ) : filteredDossiers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center text-gray-400 font-medium italic">
-                    Aucun dossier trouvé.
-                  </td>
-                </tr>
+                <div className="p-10 text-center text-gray-400 font-medium italic">
+                  Aucun dossier trouvé.
+                </div>
               ) : (
                 filteredDossiers.map((dossier) => (
-                  <tr key={dossier.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-8 py-5 whitespace-nowrap">
-                      <span className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 shadow-sm">
-                        {dossier.tracking_code}
+                  <Link key={dossier.id} to={`/dossiers/${dossier.id}`} className="block p-5 hover:bg-gray-50 transition-colors active:bg-gray-100">
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
+                        {dossier.numero_enregistrement || '-'}
                       </span>
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 font-bold tracking-tight">
-                        {dossier.objet.length > 40 ? `${dossier.objet.substring(0, 40)}...` : dossier.objet}
-                      </div>
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-600">{dossier.expediteur || '-'}</div>
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-gray-400">
-                      {format(new Date(dossier.date_arrivee), 'dd/MM/yyyy')}
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${statusColors[dossier.statut] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${statusColors[dossier.statut] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
                         {dossier.statut}
                       </span>
-                    </td>
-                    <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
-                      <Link to={`/dossiers/${dossier.id}`} className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all">
-                        Détails
-                        <Plus className="ml-1.5 h-3 w-3" />
-                      </Link>
-                    </td>
-                  </tr>
+                    </div>
+                    <h3 className="text-sm font-black text-gray-900 leading-tight mb-2">
+                      {dossier.objet}
+                    </h3>
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        {dossier.expediteur || '-'}
+                      </div>
+                      <div className="text-[10px] font-black text-gray-300">
+                        {format(new Date(dossier.date_arrivee), 'dd/MM/yyyy')}
+                      </div>
+                    </div>
+                  </Link>
                 ))
               )}
-            </tbody>
-          </table>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

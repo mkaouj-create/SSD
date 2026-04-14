@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS public.dossiers (
     objet TEXT NOT NULL,
     date_sortie DATE,
     orientation TEXT,
+    numero_orientation TEXT,
     numero_transmission TEXT,
     annotation TEXT,
     observation TEXT,
