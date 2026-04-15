@@ -140,6 +140,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
 
     if (error) {
+      if (error.message === 'Failed to fetch') {
+        throw new Error("Erreur réseau : Impossible de joindre le serveur. Vérifiez votre connexion internet, désactivez votre bloqueur de publicités, ou réessayez plus tard.");
+      }
       throw new Error(error.message);
     }
   };

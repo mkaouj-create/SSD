@@ -16,6 +16,7 @@ export const Roles = () => {
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const [editingRole, setEditingRole] = useState<any>(null);
   
   const [formData, setFormData] = useState({
@@ -118,15 +119,16 @@ export const Roles = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce rôle ?')) {
+  const handleDelete = async () => {
+    if (showDeleteModal) {
       try {
         const { error } = await supabase
           .from('roles')
           .delete()
-          .eq('id', id);
+          .eq('id', showDeleteModal);
         
         if (error) throw error;
+        setShowDeleteModal(null);
         fetchRoles();
       } catch (error) {
         console.error('Error deleting role:', error);
@@ -228,7 +230,7 @@ export const Roles = () => {
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(role.id)}
+                            onClick={() => setShowDeleteModal(role.id)}
                             className="text-red-400 hover:text-red-600 p-2.5 rounded-xl hover:bg-red-50 transition-all"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -318,6 +320,34 @@ export const Roles = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl transform transition-all text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-6">
+              <Trash2 className="h-8 w-8 text-red-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Supprimer le rôle</h3>
+            <p className="text-gray-500 mb-8">
+              Êtes-vous sûr de vouloir supprimer ce rôle ? Cette action est irréversible et pourrait affecter les utilisateurs qui y sont assignés.
+            </p>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={() => setShowDeleteModal(null)}
+                className="px-6 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-6 py-2.5 rounded-xl border border-transparent bg-red-600 text-sm font-bold text-white hover:bg-red-700 shadow-md transition-all"
+              >
+                Oui, supprimer
+              </button>
+            </div>
           </div>
         </div>
       )}

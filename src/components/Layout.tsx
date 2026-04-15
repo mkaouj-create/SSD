@@ -1,15 +1,70 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2, Plus } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2, Plus, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 export const Layout = () => {
   const { signOut, role, bureauId, hasPermission } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setShowSearchResults(false);
+    setSearchQuery('');
+    setIsMobileSearchOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const searchDossiers = async () => {
+      if (!searchQuery.trim() || !bureauId) {
+        setSearchResults([]);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const { data, error } = await supabase
+          .from('dossiers')
+          .select('id, tracking_code, objet, expediteur, numero_enregistrement')
+          .eq('bureau_id', bureauId)
+          .or(`numero_enregistrement.ilike.%${searchQuery}%,objet.ilike.%${searchQuery}%,expediteur.ilike.%${searchQuery}%,tracking_code.ilike.%${searchQuery}%`)
+          .limit(5);
+
+        if (!error && data) {
+          setSearchResults(data);
+        }
+      } catch (error) {
+        console.error('Error searching dossiers:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchDossiers, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, bureauId]);
 
   const fetchNotifications = async () => {
     if (bureauId) {
@@ -96,7 +151,7 @@ export const Layout = () => {
           </div>
           <div className="flex flex-1 flex-col">
             <nav className="flex-1 space-y-2 pb-4">
-              {navigation.map((item) => {
+              {navigation.filter(item => !item.mobileOnly).map((item) => {
                 const isActive = location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href));
                 return (
                   <Link
@@ -143,34 +198,112 @@ export const Layout = () => {
       </div>
 
       {/* Mobile header */}
-      <div className="sticky top-0 z-20 flex h-14 flex-shrink-0 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 md:hidden items-center justify-between px-4">
-        <div className="flex items-center">
-          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center mr-2 shadow-md shadow-blue-100">
-            <span className="text-white font-black text-sm">S</span>
+      <div className="sticky top-0 z-20 flex flex-col flex-shrink-0 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 md:hidden">
+        <div className="flex h-14 items-center justify-between px-4">
+          <div className="flex items-center">
+            <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center mr-2 shadow-md shadow-blue-100">
+              <span className="text-white font-black text-sm">S</span>
+            </div>
+            <h1 className="text-lg font-black text-gray-900 tracking-tighter">SSD</h1>
           </div>
-          <h1 className="text-lg font-black text-gray-900 tracking-tighter">SSD</h1>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <button
-            type="button"
-            onClick={handleNotificationClick}
-            className="relative p-2 text-gray-400 hover:text-blue-600 focus:outline-none transition-all"
-          >
-            <Bell className="h-5 w-5" aria-hidden="true" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-            )}
-          </button>
           
-          <button
-            type="button"
-            className="p-2 text-gray-500 focus:outline-none"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+              className={`p-2 focus:outline-none transition-all ${isMobileSearchOpen ? 'text-blue-600 bg-blue-50 rounded-lg' : 'text-gray-400 hover:text-blue-600'}`}
+            >
+              <Search className="h-5 w-5" aria-hidden="true" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleNotificationClick}
+              className="relative p-2 text-gray-400 hover:text-blue-600 focus:outline-none transition-all"
+            >
+              <Bell className="h-5 w-5" aria-hidden="true" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+              )}
+            </button>
+            
+            <button
+              type="button"
+              className="p-2 text-gray-500 focus:outline-none"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <Menu className="h-6 w-6" aria-hidden="true" />
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Search Bar Expandable */}
+        {isMobileSearchOpen && (
+          <div className="px-4 pb-3 pt-1 relative z-30" ref={searchRef}>
+            <div className="relative flex items-center">
+              <Search className="absolute left-3 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Rechercher un dossier..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchResults(true);
+                }}
+                className="w-full pl-9 pr-8 py-2 bg-gray-50 border-transparent rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchResults([]);
+                  }}
+                  className="absolute right-3 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Mobile Search Results */}
+            {showSearchResults && searchQuery.trim() !== '' && (
+              <div className="absolute top-full left-0 right-0 mt-1 mx-4 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50">
+                {isSearching ? (
+                  <div className="p-4 text-center text-sm text-gray-500">Recherche en cours...</div>
+                ) : searchResults.length > 0 ? (
+                  <ul className="max-h-64 overflow-y-auto divide-y divide-gray-50">
+                    {searchResults.map((dossier) => (
+                      <li key={dossier.id}>
+                        <button
+                          onClick={() => {
+                            navigate(`/dossiers/${dossier.id}`);
+                            setIsMobileSearchOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="font-bold text-gray-900 text-sm truncate pr-2">{dossier.objet}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 flex items-center space-x-2">
+                            <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                              {dossier.tracking_code}
+                            </span>
+                            {dossier.expediteur && (
+                              <span className="truncate">• {dossier.expediteur}</span>
+                            )}
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="p-4 text-center text-sm text-gray-500">Aucun dossier trouvé</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Mobile Notifications Dropdown */}
         {showNotifications && (
@@ -236,7 +369,7 @@ export const Layout = () => {
               <h1 className="text-2xl font-black text-gray-900 tracking-tighter">SSD</h1>
             </div>
             <nav className="flex-1 space-y-2">
-              {navigation.map((item) => {
+              {navigation.filter(item => !item.mobileOnly).map((item) => {
                 const isActive = location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href));
                 return (
                   <Link
@@ -272,8 +405,78 @@ export const Layout = () => {
 
       {/* Main content */}
       <div className="flex flex-1 flex-col md:pl-72 pb-20 md:pb-0">
-        {/* Top header for desktop notifications */}
-        <div className="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-gray-100 justify-end px-8 hidden md:flex">
+        {/* Top header for desktop */}
+        <div className="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-gray-100 justify-between px-8 hidden md:flex">
+          
+          {/* Global Search Desktop */}
+          <div className="flex-1 flex items-center max-w-2xl pr-8" ref={searchRef}>
+            <div className="w-full relative">
+              <div className="relative flex items-center">
+                <Search className="absolute left-3 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Rechercher un dossier (numéro, objet, expéditeur)..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchResults(true);
+                  }}
+                  onFocus={() => setShowSearchResults(true)}
+                  className="w-full pl-10 pr-10 py-2 bg-gray-50 border-transparent rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSearchResults([]);
+                    }}
+                    className="absolute right-3 text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Search Results Dropdown */}
+              {showSearchResults && searchQuery.trim() !== '' && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
+                  {isSearching ? (
+                    <div className="p-4 text-center text-sm text-gray-500">Recherche en cours...</div>
+                  ) : searchResults.length > 0 ? (
+                    <ul className="max-h-96 overflow-y-auto divide-y divide-gray-50">
+                      {searchResults.map((dossier) => (
+                        <li key={dossier.id}>
+                          <button
+                            onClick={() => navigate(`/dossiers/${dossier.id}`)}
+                            className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-bold text-gray-900 text-sm truncate pr-2">{dossier.objet}</span>
+                              <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                {dossier.tracking_code}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 flex items-center space-x-2">
+                              {dossier.numero_enregistrement && (
+                                <span>N° {dossier.numero_enregistrement}</span>
+                              )}
+                              {dossier.numero_enregistrement && dossier.expediteur && <span>•</span>}
+                              {dossier.expediteur && (
+                                <span className="truncate">{dossier.expediteur}</span>
+                              )}
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="p-4 text-center text-sm text-gray-500">Aucun dossier trouvé</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center relative">
             <button
               type="button"

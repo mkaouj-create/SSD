@@ -377,14 +377,23 @@ WITH CHECK (true);
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (id, full_name, email, requested_bureau_name, status, role)
+    INSERT INTO public.profiles (
+        id, 
+        full_name, 
+        email, 
+        requested_bureau_name, 
+        status, 
+        role,
+        bureau_id
+    )
     VALUES (
         NEW.id,
         NEW.raw_user_meta_data->>'full_name',
         NEW.email,
         NEW.raw_user_meta_data->>'bureau_name',
-        'pending',
-        'client'
+        COALESCE(NEW.raw_user_meta_data->>'status', 'pending'),
+        COALESCE(NEW.raw_user_meta_data->>'role', 'client'),
+        NULLIF(NEW.raw_user_meta_data->>'bureau_id', '')::UUID
     );
     RETURN NEW;
 END;

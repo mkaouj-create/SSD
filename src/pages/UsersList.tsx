@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
 import { Plus, Trash2, Shield, User as UserIcon, AlertTriangle } from 'lucide-react';
 
 export const UsersList = () => {
@@ -95,11 +95,95 @@ export const UsersList = () => {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Note: Creating a user in Supabase Auth from the client is usually for self-signup.
-    // To create OTHER users, you'd typically use a Supabase Edge Function or an Admin API.
-    // For this demo, we'll show a more professional message.
-    alert(`Compte pour ${newUser.full_name} prêt à être créé.\n\nEmail: ${newUser.email}\nMot de passe: ${newUser.password}\nRôle: ${newUser.role}\n\nNote: Dans cette version de démonstration, la création directe d'utilisateurs par un administrateur nécessite une configuration Supabase Admin (Edge Functions). \n\nPour le moment, veuillez demander à l'utilisateur de s'inscrire via la page d'inscription.`);
-    setShowAddModal(false);
+    
+    try {
+      // Create a secondary Supabase client to avoid logging out the current admin
+      const { createClient } = await import('@supabase/supabase-js');
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Configuration Supabase manquante.");
+      }
+
+      const adminAuthClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+          storageKey: 'admin-auth-temp-key',
+        }
+      });
+
+      // Sign up the new user
+      const { data: authData, error: authError } = await adminAuthClient.auth.signUp({
+        email: newUser.email,
+        password: newUser.password,
+        options: {
+          data: {
+            full_name: newUser.full_name,
+            bureau_id: bureauId,
+            role: newUser.role,
+            status: 'approved'
+          }
+        }
+      });
+
+      if (authError) {
+        if (authError.message === 'Failed to fetch') {
+          throw new Error("Erreur réseau : Impossible de joindre le serveur d'authentification. Cela est souvent dû à une limite de sécurité (trop de comptes créés en peu de temps), à un bloqueur de publicités, ou à un projet en veille. Veuillez réessayer dans quelques minutes.");
+        }
+        throw new Error(`Erreur lors de la création du compte: ${authError.message}`);
+      }
+
+      if (authData.user) {
+        // Wait a brief moment to allow the database trigger to create the profile
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Attempt 1: Update using the primary admin client
+        // This works if the trigger successfully assigned the bureau_id from metadata
+        let { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            bureau_id: bureauId,
+            role: newUser.role,
+            status: 'approved'
+          })
+          .eq('id', authData.user.id);
+
+        // Attempt 2: If primary client fails (e.g., due to RLS because bureau_id is null),
+        // try using the new user's own client (adminAuthClient)
+        if (profileError) {
+          console.log("Primary client update failed, trying secondary client...", profileError);
+          const { error: secondaryError } = await adminAuthClient
+            .from('profiles')
+            .update({
+              bureau_id: bureauId,
+              role: newUser.role,
+              status: 'approved'
+            })
+            .eq('id', authData.user.id);
+            
+          if (secondaryError) {
+             console.log("Secondary client update failed, trying upsert...", secondaryError);
+             // Fallback: Upsert if the profile doesn't exist at all
+             await supabase.from('profiles').upsert({
+                id: authData.user.id,
+                email: newUser.email,
+                full_name: newUser.full_name,
+                bureau_id: bureauId,
+                role: newUser.role,
+                status: 'approved'
+             });
+          }
+        }
+
+        alert(`L'utilisateur ${newUser.full_name} a été créé avec succès.\n\nEmail: ${newUser.email}\nMot de passe: ${newUser.password}\nRôle: ${newUser.role}`);
+        setShowAddModal(false);
+        fetchUsers();
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Une erreur est survenue lors de la création de l'utilisateur.");
+    }
   };
 
   const handleDeleteUser = async () => {
