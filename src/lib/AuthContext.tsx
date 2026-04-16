@@ -7,6 +7,7 @@ interface AuthContextType {
   role: string | null;
   status: string | null;
   bureauId: string | null;
+  bureauName: string | null;
   permissions: string[];
   hasPermission: (perm: string) => boolean;
   isLoading: boolean;
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
   role: null,
   status: null,
   bureauId: null,
+  bureauName: null,
   permissions: [],
   hasPermission: () => false,
   isLoading: true,
@@ -70,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, bureaus(name)')
         .eq('id', userId)
         .maybeSingle();
 
@@ -168,6 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role: userProfile?.role || null, 
       status: userProfile?.status || null,
       bureauId: userProfile?.bureau_id || null, 
+      bureauName: userProfile?.bureaus?.name || null,
       permissions,
       hasPermission,
       isLoading, 

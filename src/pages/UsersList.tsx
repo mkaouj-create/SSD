@@ -104,6 +104,10 @@ export const UsersList = () => {
         throw new Error("Configuration Supabase manquante.");
       }
 
+      if (!bureauId) {
+        throw new Error("Erreur : Impossible de déterminer votre bureau. Veuillez vous reconnecter.");
+      }
+
       const adminAuthClient = createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
           persistSession: false,
@@ -138,43 +142,8 @@ export const UsersList = () => {
         // Wait a brief moment to allow the database trigger to create the profile
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Attempt 1: Update using the primary admin client
-        // This works if the trigger successfully assigned the bureau_id from metadata
-        let { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            bureau_id: bureauId,
-            role: newUser.role,
-            status: 'approved'
-          })
-          .eq('id', authData.user.id);
-
-        // Attempt 2: If primary client fails (e.g., due to RLS because bureau_id is null),
-        // try using the new user's own client (adminAuthClient)
-        if (profileError) {
-          console.log("Primary client update failed, trying secondary client...", profileError);
-          const { error: secondaryError } = await adminAuthClient
-            .from('profiles')
-            .update({
-              bureau_id: bureauId,
-              role: newUser.role,
-              status: 'approved'
-            })
-            .eq('id', authData.user.id);
-            
-          if (secondaryError) {
-             console.log("Secondary client update failed, trying upsert...", secondaryError);
-             // Fallback: Upsert if the profile doesn't exist at all
-             await supabase.from('profiles').upsert({
-                id: authData.user.id,
-                email: newUser.email,
-                full_name: newUser.full_name,
-                bureau_id: bureauId,
-                role: newUser.role,
-                status: 'approved'
-             });
-          }
-        }
+        // Refresh the users list to show the newly created user
+        fetchUsers();
 
         alert(`L'utilisateur ${newUser.full_name} a été créé avec succès.\n\nEmail: ${newUser.email}\nMot de passe: ${newUser.password}\nRôle: ${newUser.role}`);
         setShowAddModal(false);

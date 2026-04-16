@@ -93,7 +93,9 @@ export const DossiersList = () => {
   }, [bureauId, statusFilter, dateStart, dateEnd, role, user?.id]);
 
   const filteredDossiers = dossiers.filter(d => {
-    const matchesTab = (d.type_dossier || 'Arrivée') === activeTab;
+    const isDepart = (d.type_dossier === 'Départ' || d.statut === 'Transmis');
+    const matchesTab = activeTab === 'Arrivée' ? !isDepart : isDepart;
+    
     const matchesSearch = 
       (d.numero_enregistrement && d.numero_enregistrement.toLowerCase().includes(searchTerm.toLowerCase())) ||
       d.objet.toLowerCase().includes(searchTerm.toLowerCase()) ||

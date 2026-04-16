@@ -19,8 +19,12 @@ export const Register = () => {
     setError(null);
 
     try {
-      // 1. Create the user in Supabase Auth
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // Add a timeout to prevent infinite hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Délai d'attente dépassé. Vérifiez votre connexion internet ou les paramètres de votre navigateur.")), 15000);
+      });
+
+      const signUpPromise = supabase.auth.signUp({
         email,
         password,
         options: {
@@ -31,8 +35,14 @@ export const Register = () => {
         }
       });
 
+      // 1. Create the user in Supabase Auth
+      const { data, error: signUpError } = await Promise.race([signUpPromise, timeoutPromise]) as any;
+
       if (signUpError) {
         console.error('Supabase SignUp Error:', signUpError);
+        if (signUpError.message === 'Failed to fetch') {
+          throw new Error("Erreur réseau : Impossible de joindre le serveur. Cela est souvent dû à une limite de sécurité (trop de comptes créés), à un bloqueur de publicités, ou à un projet en veille.");
+        }
         throw signUpError;
       }
 
@@ -41,7 +51,11 @@ export const Register = () => {
       }
     } catch (err: any) {
       console.error('Detailed Registration Error:', err);
-      setError(err.message || 'Une erreur est survenue lors de l\'inscription');
+      let errorMessage = err.message;
+      if (!errorMessage || errorMessage === 'null') {
+        errorMessage = 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.';
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

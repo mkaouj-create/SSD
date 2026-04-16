@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2, Plus, X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
@@ -105,6 +105,10 @@ export const Layout = () => {
   }, [bureauId, location.pathname]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  if (role === 'Vagmeustre' || role === 'Directeur') {
+    return <Navigate to="/vaguemestre" replace />;
+  }
 
   const handleNotificationClick = async () => {
     setShowNotifications(!showNotifications);

@@ -26,10 +26,11 @@ export const DossierDetails = () => {
   const [showTransmitModal, setShowTransmitModal] = useState(false);
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [bureaus, setBureaus] = useState<any[]>([]);
-  const [transmissionData, setTransmissionData] = useState({
-    destination_bureau_id: '',
-    niveau: 'Normal',
-    commentaire: ''
+  const [departData, setDepartData] = useState({
+    statut: 'Transmis',
+    orientation: '',
+    numero_orientation: '',
+    annotation: ''
   });
 
   const fetchBureaus = async () => {
@@ -47,56 +48,54 @@ export const DossierDetails = () => {
 
   const handleTransmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!transmissionData.destination_bureau_id || !id) return;
+    if (!id) return;
 
     setIsTransmitting(true);
     try {
-      const destBureau = bureaus.find(b => b.id === transmissionData.destination_bureau_id);
-      
-      // 1. Create transmission record
-      const { error: transError } = await supabase
-        .from('transmissions')
-        .insert([
-          {
-            dossier_id: id,
-            source_bureau_id: bureauId,
-            destination_bureau_id: transmissionData.destination_bureau_id,
-            niveau: transmissionData.niveau,
-            commentaire: transmissionData.commentaire,
-            user_id: user?.id
-          }
-        ]);
-
-      if (transError) throw transError;
-
-      // 2. Update dossier status and move to destination bureau
       const { error: dossierUpdateError } = await supabase
         .from('dossiers')
         .update({
-          statut: 'Transmis',
-          bureau_id: transmissionData.destination_bureau_id,
-          orientation: destBureau?.name || 'Nouveau bureau'
+          statut: departData.statut,
+          orientation: departData.orientation,
+          numero_orientation: departData.numero_orientation,
+          annotation: departData.annotation,
+          date_sortie: new Date().toISOString().split('T')[0]
         })
         .eq('id', id);
 
       if (dossierUpdateError) throw dossierUpdateError;
 
-      // 3. Create notification for destination bureau
-      await supabase.from('notifications').insert([
+      // Log the departure in audit logs and/or transmissions if desired
+      // We will create a transmission log without destination bureau just to keep history
+      await supabase
+        .from('transmissions')
+        .insert([
+          {
+            dossier_id: id,
+            source_bureau_id: bureauId,
+            niveau: 'Normal',
+            commentaire: departData.annotation,
+            user_id: user?.id
+          }
+        ]);
+
+      await supabase.from('audit_logs').insert([
         {
-          bureau_id: transmissionData.destination_bureau_id,
-          message: `Nouveau dossier transmis : ${dossier.numero_enregistrement || dossier.objet} (Urgence: ${transmissionData.niveau})`,
-          type: 'transmission',
-          read: false
+          dossier_id: id,
+          bureau_id: bureauId,
+          user_id: user?.id,
+          user_name: user?.user_metadata?.full_name || 'Utilisateur',
+          action: `Départ du dossier - Orientation: ${departData.orientation || 'Non spécifiée'}`,
+          details: departData
         }
       ]);
 
       setShowTransmitModal(false);
-      setTransmissionData({ destination_bureau_id: '', niveau: 'Normal', commentaire: '' });
+      setDepartData({ statut: 'Transmis', orientation: '', numero_orientation: '', annotation: '' });
       fetchData();
     } catch (error) {
-      console.error('Error transmitting dossier:', error);
-      alert('Erreur lors de la transmission du dossier');
+      console.error('Error starting depart:', error);
+      alert('Erreur lors du départ du dossier');
     } finally {
       setIsTransmitting(false);
     }
@@ -224,7 +223,15 @@ export const DossierDetails = () => {
           {hasPermission('manage_dossiers') && (
             <>
               <button
-                onClick={() => setShowTransmitModal(true)}
+                onClick={() => {
+                  setDepartData({
+                    statut: dossier.statut || 'Transmis',
+                    orientation: dossier.orientation || '',
+                    numero_orientation: dossier.numero_orientation || dossier.numero_enregistrement || '',
+                    annotation: dossier.annotation || ''
+                  });
+                  setShowTransmitModal(true);
+                }}
                 className="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
               >
                 <Activity className="mr-2 h-4 w-4" />
@@ -351,7 +358,7 @@ export const DossierDetails = () => {
                         </div>
                         <div className="flex flex-col">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-bold text-gray-900">Vers {trans.destination_bureau_name || 'un autre bureau'}</span>
+                            <span className="text-sm font-bold text-gray-900">Vers {trans.destination_bureau_name || 'service externe'}</span>
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                               {format(new Date(trans.date_transmission), "dd/MM/yyyy")}
                             </span>
@@ -425,56 +432,69 @@ export const DossierDetails = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-gray-100 overflow-hidden transform transition-all">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6 text-white">
-              <h3 className="text-xl font-black tracking-tight">Transmettre le dossier</h3>
-              <p className="text-blue-100 text-sm font-medium mt-1">Envoyez ce dossier vers un autre bureau pour traitement.</p>
+              <h3 className="text-xl font-black tracking-tight">Départ (Transmettre)</h3>
+              <p className="text-blue-100 text-sm font-medium mt-1">Marquez le départ de ce dossier vers un autre service.</p>
             </div>
             
             <form onSubmit={handleTransmit} className="p-8 space-y-6">
+              
               <div>
-                <label htmlFor="dest_bureau" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Bureau de destination <span className="text-red-500">*</span>
+                <label htmlFor="statut" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
+                  Statut actuel <span className="text-red-500">*</span>
                 </label>
                 <select
-                  id="dest_bureau"
+                  id="statut"
                   required
                   className="block w-full rounded-xl border-gray-200 py-3 px-4 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all"
-                  value={transmissionData.destination_bureau_id}
-                  onChange={(e) => setTransmissionData({ ...transmissionData, destination_bureau_id: e.target.value })}
+                  value={departData.statut}
+                  onChange={(e) => setDepartData({ ...departData, statut: e.target.value })}
                 >
-                  <option value="">Sélectionner un bureau...</option>
-                  {bureaus.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
+                  <option value="Reçu">Reçu</option>
+                  <option value="En cours">En cours</option>
+                  <option value="Transmis">Transmis</option>
+                  <option value="Terminé">Terminé</option>
                 </select>
               </div>
 
               <div>
-                <label htmlFor="niveau" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Niveau d'urgence
+                <label htmlFor="orientation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
+                  Orientation / Service (Destination)
                 </label>
-                <select
-                  id="niveau"
+                <input
+                  type="text"
+                  id="orientation"
                   className="block w-full rounded-xl border-gray-200 py-3 px-4 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all"
-                  value={transmissionData.niveau}
-                  onChange={(e) => setTransmissionData({ ...transmissionData, niveau: e.target.value })}
-                >
-                  <option value="Normal">Normal</option>
-                  <option value="Urgent">Urgent</option>
-                  <option value="Très Urgent">Très Urgent</option>
-                </select>
+                  placeholder="Nom du service..."
+                  value={departData.orientation}
+                  onChange={(e) => setDepartData({ ...departData, orientation: e.target.value })}
+                />
               </div>
 
               <div>
-                <label htmlFor="commentaire_trans" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Commentaire / Instructions
+                <label htmlFor="num_orientation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
+                  Numéro d'Orientation
+                </label>
+                <input
+                  type="text"
+                  id="num_orientation"
+                  className="block w-full rounded-xl border-gray-200 py-3 px-4 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all"
+                  placeholder="Numéro de transmission..."
+                  value={departData.numero_orientation}
+                  onChange={(e) => setDepartData({ ...departData, numero_orientation: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="annotation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
+                  Annotation
                 </label>
                 <textarea
-                  id="commentaire_trans"
+                  id="annotation"
                   rows={3}
                   className="block w-full rounded-xl border-gray-200 py-3 px-4 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all resize-none"
-                  placeholder="Instructions pour le bureau de destination..."
-                  value={transmissionData.commentaire}
-                  onChange={(e) => setTransmissionData({ ...transmissionData, commentaire: e.target.value })}
+                  placeholder="Note ou annotation liée à ce départ..."
+                  value={departData.annotation}
+                  onChange={(e) => setDepartData({ ...departData, annotation: e.target.value })}
                 />
               </div>
 
@@ -491,7 +511,7 @@ export const DossierDetails = () => {
                   disabled={isTransmitting}
                   className="flex-1 inline-flex items-center justify-center px-6 py-3 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all disabled:bg-blue-400"
                 >
-                  {isTransmitting ? 'Transmission...' : 'Confirmer la transmission'}
+                  {isTransmitting ? 'Enregistrement...' : 'Valider le départ'}
                 </button>
               </div>
             </form>

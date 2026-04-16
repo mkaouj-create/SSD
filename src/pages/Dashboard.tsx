@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { FileText, Clock, CheckCircle, AlertCircle, Inbox, Send, Activity, TrendingUp } from 'lucide-react';
 
 export const Dashboard = () => {
-  const { bureauId, role, user } = useAuth();
+  const { bureauId, role, user, bureauName } = useAuth();
   const [stats, setStats] = useState({
     total: 0,
     recus: 0,
@@ -158,7 +158,12 @@ export const Dashboard = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Tableau de bord</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Tableau de bord</h1>
+          {bureauName && (
+            <p className="text-sm font-medium text-gray-500 mt-1">{bureauName}</p>
+          )}
+        </div>
         {role === 'Super_admin' && (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200">
             Vue Super Administrateur (Global)

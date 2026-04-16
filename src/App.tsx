@@ -18,6 +18,8 @@ import { PendingApproval } from './pages/PendingApproval';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { Layout } from './components/Layout';
+import { SharedLogin } from './pages/SharedLogin';
+import { VaguemestrePortal } from './pages/VaguemestrePortal';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, isLoading, status, user } = useAuth();
@@ -61,8 +63,16 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/shared-login" element={<SharedLogin />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          
+          <Route path="/vaguemestre" element={
+            <ProtectedRoute>
+              <VaguemestrePortal />
+            </ProtectedRoute>
+          } />
+
           <Route
             element={
               <ProtectedRoute>

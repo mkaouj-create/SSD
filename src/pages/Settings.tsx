@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Building, User, Save, Check } from 'lucide-react';
+import { VaguemestreAccess } from '../components/VaguemestreAccess';
 
 export const Settings = () => {
   const { user, role, bureauId } = useAuth();
@@ -224,6 +225,9 @@ export const Settings = () => {
             </div>
           </div>
         )}
+        
+        {/* Vaguemestre Access Link Component */}
+        <VaguemestreAccess />
       </div>
     </div>
   );
