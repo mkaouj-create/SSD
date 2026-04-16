@@ -22,6 +22,10 @@ export const VaguemestreAccess = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Active links
+  const [activeLinks, setActiveLinks] = useState<any[]>([]);
+  const [loadingLinks, setLoadingLinks] = useState(false);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -31,6 +35,27 @@ export const VaguemestreAccess = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const fetchActiveLinks = async () => {
+    if (!bureauId) return;
+    setLoadingLinks(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, role, requested_bureau_name, created_at')
+        .eq('bureau_id', bureauId)
+        .in('role', ['Vagmeustre', 'Directeur'])
+        .neq('status', 'rejected')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setActiveLinks(data || []);
+    } catch (err) {
+      console.error('Error fetching active links:', err);
+    } finally {
+      setLoadingLinks(false);
+    }
+  };
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -62,6 +87,7 @@ export const VaguemestreAccess = () => {
     
     if (role === 'admin' || role === 'Super_admin') {
       fetchServices();
+      fetchActiveLinks();
     }
   }, [bureauId, role]);
 
@@ -106,6 +132,9 @@ export const VaguemestreAccess = () => {
         ? `directeur_${bureauId.substring(0, 8)}_${timestamp}@ssd-app.local`
         : `vaguemestre_${bureauId.substring(0, 8)}_${timestamp}@ssd-app.local`;
       
+      const token = btoa(`${uniqueEmail}:${randomPassword}`);
+      const link = `${window.location.origin}/shared-login?t=${token}`;
+
       const { data: newData, error: signUpError } = await adminAuthClient.auth.signUp({
         email: uniqueEmail,
         password: randomPassword,
@@ -115,7 +144,8 @@ export const VaguemestreAccess = () => {
             bureau_id: bureauId,
             role: accessType === 'Directeur' ? 'Directeur' : 'Vagmeustre',
             service: accessType === 'Vaguemestre' ? targetService.trim() : '',
-            status: 'approved'
+            status: 'approved',
+            bureau_name: token // We store the base64 token here to easily retrieve it later
           }
         }
       });
@@ -123,11 +153,11 @@ export const VaguemestreAccess = () => {
       if (signUpError && signUpError.message !== 'Failed to fetch') {
         throw new Error(`Erreur: ${signUpError.message}`);
       }
-
-      const token = btoa(`${uniqueEmail}:${randomPassword}`);
-      const link = `${window.location.origin}/shared-login?t=${token}`;
       
       setGeneratedLink(link);
+      
+      // Refresh the list of active links
+      setTimeout(fetchActiveLinks, 1000); // Small delay to let trigger finish
 
     } catch (error: any) {
       console.error('Error generating vaguemestre link:', error);
@@ -143,10 +173,36 @@ export const VaguemestreAccess = () => {
     setTimeout(() => setCopied(false), 3000);
   };
 
+  const handleCopyExisting = (token: string) => {
+    const link = `${window.location.origin}/shared-login?t=${token}`;
+    navigator.clipboard.writeText(link);
+    alert('Lien copié dans le presse-papier !');
+  };
+
+  const handleRevokeLink = async (profileId: string, name: string) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir révoquer l'accès pour "${name}" ? Ce lien deviendra immédiatement inactif.`)) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ status: 'rejected' })
+          .eq('id', profileId);
+        
+        if (error) throw error;
+        
+        // Refresh list
+        fetchActiveLinks();
+      } catch (err: any) {
+        console.error('Error revoking link:', err);
+        alert('Erreur lors de la révocation du lien : ' + err.message);
+      }
+    }
+  };
+
   return (
-    <div className="bg-white shadow-xl rounded-3xl overflow-hidden border border-gray-100 mt-8">
-      <div className="px-6 py-8 sm:p-10">
-        <div className="flex items-center mb-6">
+    <div className="space-y-8">
+      <div className="bg-white shadow-xl rounded-3xl overflow-hidden border border-gray-100 mt-8">
+        <div className="px-6 py-8 sm:p-10">
+          <div className="flex items-center mb-6">
           <div className="h-12 w-12 rounded-2xl bg-orange-50 flex items-center justify-center mr-4">
             <Link2 className="h-6 w-6 text-orange-600" />
           </div>
@@ -310,6 +366,70 @@ export const VaguemestreAccess = () => {
             </button>
           </div>
         )}
+      </div>
+      </div>
+
+      {/* Liste des liens actifs */}
+      <div className="bg-white shadow-xl rounded-3xl overflow-hidden border border-gray-100">
+        <div className="px-6 py-6 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center">
+            <Link2 className="h-5 w-5 text-gray-500 mr-2" />
+            Liens Partagés Actifs
+          </h3>
+          <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full">
+            {activeLinks.length} lien(s)
+          </span>
+        </div>
+        
+        <div className="p-0">
+          {loadingLinks ? (
+            <div className="p-8 text-center text-gray-500 animate-pulse text-sm font-medium">Chargement des liens actifs...</div>
+          ) : activeLinks.length === 0 ? (
+            <div className="p-10 text-center text-gray-500">
+              <Link2 className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm font-medium">Aucun lien d'accès partagé n'est actuellement actif.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {activeLinks.map((link) => (
+                <li key={link.id} className="p-4 sm:p-6 hover:bg-gray-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                        link.role === 'Directeur' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {link.role}
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">{link.full_name}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 flex items-center">
+                      <span className="font-semibold mr-1">Créé le :</span>
+                      {new Date(link.created_at).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleCopyExisting(link.requested_bureau_name)}
+                      className="inline-flex items-center px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+                      title="Copier le lien"
+                    >
+                      <Copy className="h-4 w-4 mr-2 text-gray-400" />
+                      Copier
+                    </button>
+                    <button
+                      onClick={() => handleRevokeLink(link.id, link.full_name)}
+                      className="inline-flex items-center px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-sm font-bold text-red-600 hover:bg-red-100 transition-colors"
+                      title="Révoquer ce lien"
+                    >
+                      Révoquer
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

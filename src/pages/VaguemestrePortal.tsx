@@ -22,6 +22,9 @@ export const VaguemestrePortal = () => {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
 
+  // Selected dossier for details modal
+  const [selectedDossier, setSelectedDossier] = useState<any>(null);
+
   const resetFilters = () => {
     setFilterYear('');
     setFilterDate('');
@@ -267,7 +270,11 @@ export const VaguemestrePortal = () => {
             ) : (
               <div className="space-y-4">
                 {results.map((dossier) => (
-                  <div key={dossier.id} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div 
+                    key={dossier.id} 
+                    onClick={() => setSelectedDossier(dossier)}
+                    className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer"
+                  >
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2">
                         <h4 className="text-lg font-bold text-gray-900 line-clamp-2 pr-4">{dossier.objet}</h4>
@@ -308,6 +315,151 @@ export const VaguemestrePortal = () => {
           </div>
         )}
       </main>
+
+      {/* Details Modal */}
+      {selectedDossier && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-black bg-opacity-30 backdrop-blur-sm" onClick={() => setSelectedDossier(null)}></div>
+
+            <div className="relative inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-3xl z-50">
+              <div className="absolute top-0 right-0 pt-6 pr-6">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDossier(null)}
+                  className="text-gray-400 bg-gray-50 hover:bg-red-50 hover:text-red-500 rounded-xl p-2 transition-colors"
+                >
+                  <span className="sr-only">Fermer</span>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex items-center mb-6 border-b border-gray-100 pb-6 pr-10">
+                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center mr-4 ${
+                  selectedDossier.statut === 'En cours' ? 'bg-yellow-100' :
+                  selectedDossier.statut === 'Terminé' ? 'bg-green-100' :
+                  selectedDossier.statut === 'Transmis' ? 'bg-purple-100' :
+                  'bg-gray-100'
+                }`}>
+                  <FileText className={`h-6 w-6 ${
+                    selectedDossier.statut === 'En cours' ? 'text-yellow-600' :
+                    selectedDossier.statut === 'Terminé' ? 'text-green-600' :
+                    selectedDossier.statut === 'Transmis' ? 'text-purple-600' :
+                    'text-gray-600'
+                  }`} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 leading-tight">Détails du Dossier</h3>
+                  <p className="text-sm text-gray-500 font-medium">Code de suivi: <span className="font-bold text-gray-900">{selectedDossier.tracking_code}</span></p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Left Column (Information Primary) */}
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Informations Générales</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Objet du dossier</p>
+                        <p className="text-base font-semibold text-gray-900 bg-gray-50 p-3 rounded-xl border border-gray-100">{selectedDossier.objet}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Type</p>
+                          <p className="text-sm font-semibold text-gray-900">{selectedDossier.type_dossier || 'Arrivée'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Statut</p>
+                          <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-bold ${
+                            selectedDossier.statut === 'En cours' ? 'bg-yellow-100 text-yellow-800' :
+                            selectedDossier.statut === 'Terminé' ? 'bg-green-100 text-green-800' :
+                            selectedDossier.statut === 'Transmis' ? 'bg-purple-100 text-purple-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {selectedDossier.statut}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">N° Enregistrement</p>
+                          <p className="text-sm font-semibold text-gray-900">{selectedDossier.numero_enregistrement || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Date d'arrivée</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {selectedDossier.date_arrivee ? new Date(selectedDossier.date_arrivee).toLocaleDateString() : '-'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Origine</h4>
+                    <div className="space-y-4 bg-blue-50/50 p-4 rounded-2xl border border-blue-50">
+                      <div>
+                        <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Service Expéditeur</p>
+                        <p className="text-sm font-semibold text-blue-900">{selectedDossier.expediteur || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">N° Expéditeur</p>
+                        <p className="text-sm font-semibold text-blue-900">{selectedDossier.numero_expediteur || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column (Tracking / Transmission) */}
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Transmission</h4>
+                    <div className="space-y-4 bg-orange-50/50 p-4 rounded-2xl border border-orange-50">
+                      <div>
+                        <p className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-1">Service Orienté vers (Orientation)</p>
+                        <p className="text-sm font-semibold text-orange-900">{selectedDossier.orientation || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-1">N° d'Orientation / Sortie</p>
+                        <p className="text-sm font-semibold text-orange-900">{selectedDossier.numero_orientation || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-1">Date de sortie / transmission</p>
+                        <p className="text-sm font-semibold text-orange-900">
+                          {selectedDossier.date_sortie ? new Date(selectedDossier.date_sortie).toLocaleDateString() : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Notes & Observations</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Annotation particulière</p>
+                        <p className="text-sm font-semibold text-gray-900 whitespace-pre-wrap leading-relaxed">{selectedDossier.annotation || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Observation</p>
+                        <p className="text-sm font-semibold text-gray-900 whitespace-pre-wrap leading-relaxed">{selectedDossier.observation || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDossier(null)}
+                  className="px-6 py-3 font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
