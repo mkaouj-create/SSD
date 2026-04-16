@@ -180,20 +180,31 @@ export const VaguemestreAccess = () => {
   };
 
   const handleRevokeLink = async (profileId: string, name: string) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir révoquer l'accès pour "${name}" ? Ce lien deviendra immédiatement inactif.`)) {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer DÉFINITIVEMENT l'accès pour "${name}" ?\n\nCela supprimera le compte de l'authentification et de la base de données.`)) {
       try {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ status: 'rejected' })
-          .eq('id', profileId);
+        // First try the RPC to delete fully
+        const { error } = await supabase.rpc('delete_shared_user', { target_user_id: profileId });
         
-        if (error) throw error;
+        if (error) {
+          // If the RPC throws because it doesn't exist yet, we do a fallback logic
+          if (error.code === 'PGRST202' || error.message.includes('Could not find')) {
+            alert("Info: La fonction SQL de suppression totale n'est pas encore installée sur votre Supabase. Révocation simple en cours (statut modifié à 'rejected').");
+            const { error: fallbackError } = await supabase
+              .from('profiles')
+              .update({ status: 'rejected' })
+              .eq('id', profileId);
+            
+            if (fallbackError) throw fallbackError;
+          } else {
+            throw error;
+          }
+        }
         
-        // Refresh list
-        fetchActiveLinks();
+        // Wait a moment for cascading deletes to propagate
+        setTimeout(() => fetchActiveLinks(), 500);
       } catch (err: any) {
         console.error('Error revoking link:', err);
-        alert('Erreur lors de la révocation du lien : ' + err.message);
+        alert('Erreur lors de la suppression du lien : ' + err.message);
       }
     }
   };

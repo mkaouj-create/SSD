@@ -424,3 +424,37 @@ CREATE TRIGGER update_roles_modtime BEFORE UPDATE ON public.roles FOR EACH ROW E
 
 DROP TRIGGER IF EXISTS update_dossiers_modtime ON public.dossiers;
 CREATE TRIGGER update_dossiers_modtime BEFORE UPDATE ON public.dossiers FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- Function to allow Bureau Admins to delete shared links (Vaguemestre/Directeur) securely
+CREATE OR REPLACE FUNCTION public.delete_shared_user(target_user_id UUID)
+RETURNS void AS $$
+DECLARE
+    v_bureau_id UUID;
+    v_caller_role TEXT;
+    v_target_bureau_id UUID;
+    v_target_role TEXT;
+BEGIN
+    -- Get caller's bureau and role
+    SELECT bureau_id, role INTO v_bureau_id, v_caller_role
+    FROM public.profiles
+    WHERE id = auth.uid();
+
+    -- Get target user's bureau and role
+    SELECT bureau_id, role INTO v_target_bureau_id, v_target_role
+    FROM public.profiles
+    WHERE id = target_user_id;
+
+    -- Verify caller is admin of the same bureau
+    IF (v_caller_role IN ('admin', 'Super_admin')) AND (v_bureau_id = v_target_bureau_id) THEN
+        -- Verify target is a generated link account (Vagmeustre or Directeur)
+        IF v_target_role IN ('Vagmeustre', 'Directeur') THEN
+            -- Delete from auth.users (this will cascade to public.profiles)
+            DELETE FROM auth.users WHERE id = target_user_id;
+        ELSE
+            RAISE EXCEPTION 'Action non autorisée : cet utilisateur n''est pas un accès partagé valide.';
+        END IF;
+    ELSE
+        RAISE EXCEPTION 'Action non autorisée ou bureau incorrect.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
