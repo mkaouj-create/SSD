@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Clock, FileText, Edit, Trash2, AlertTriangle, MessageSquare, Activity, User } from 'lucide-react';
+import { ArrowLeft, Clock, FileText, Edit, Trash2, AlertTriangle, MessageSquare, Activity, User, X } from 'lucide-react';
 import { format } from 'date-fns';
+
+import { parseOrientations } from '../lib/orientationUtils';
 
 const statusColors: Record<string, string> = {
   'Reçu': 'bg-gray-100 text-gray-800',
@@ -28,10 +30,27 @@ export const DossierDetails = () => {
   const [bureaus, setBureaus] = useState<any[]>([]);
   const [departData, setDepartData] = useState({
     statut: 'Transmis',
-    orientation: '',
     numero_orientation: '',
-    annotation: ''
   });
+
+  const [orientationsList, setOrientationsList] = useState([
+    { service: '', annotation: '' }
+  ]);
+
+  const addOrientation = () => {
+    setOrientationsList([...orientationsList, { service: '', annotation: '' }]);
+  };
+
+  const updateOrientation = (index: number, field: string, value: string) => {
+    const newList = [...orientationsList];
+    newList[index] = { ...newList[index], [field]: value };
+    setOrientationsList(newList);
+  };
+
+  const removeOrientation = (index: number) => {
+    const newList = orientationsList.filter((_, i) => i !== index);
+    setOrientationsList(newList);
+  };
 
   const fetchBureaus = async () => {
     try {
@@ -52,13 +71,17 @@ export const DossierDetails = () => {
 
     setIsTransmitting(true);
     try {
+      const validOrientations = orientationsList.filter(o => o.service.trim() !== '');
+      const orientationsStr = JSON.stringify(validOrientations);
+      const combinedAnnotations = validOrientations.map(o => o.annotation).filter(a => a).join(' | ');
+
       const { error: dossierUpdateError } = await supabase
         .from('dossiers')
         .update({
           statut: departData.statut,
-          orientation: departData.orientation,
+          orientation: orientationsStr,
           numero_orientation: departData.numero_orientation,
-          annotation: departData.annotation,
+          annotation: combinedAnnotations,
           date_sortie: new Date().toISOString().split('T')[0]
         })
         .eq('id', id);
@@ -74,10 +97,12 @@ export const DossierDetails = () => {
             dossier_id: id,
             source_bureau_id: bureauId,
             niveau: 'Normal',
-            commentaire: departData.annotation,
+            commentaire: combinedAnnotations,
             user_id: user?.id
           }
         ]);
+
+      const orientationsText = validOrientations.map(o => o.service).join(', ');
 
       await supabase.from('audit_logs').insert([
         {
@@ -85,13 +110,14 @@ export const DossierDetails = () => {
           bureau_id: bureauId,
           user_id: user?.id,
           user_name: user?.user_metadata?.full_name || 'Utilisateur',
-          action: `Départ du dossier - Orientation: ${departData.orientation || 'Non spécifiée'}`,
-          details: departData
+          action: `Départ du dossier - Orientations: ${orientationsText || 'Non spécifiée'}`,
+          details: { ...departData, orientations: validOrientations }
         }
       ]);
 
       setShowTransmitModal(false);
-      setDepartData({ statut: 'Transmis', orientation: '', numero_orientation: '', annotation: '' });
+      setDepartData({ statut: 'Transmis', numero_orientation: '' });
+      setOrientationsList([{ service: '', annotation: '' }]);
       fetchData();
     } catch (error) {
       console.error('Error starting depart:', error);
@@ -302,9 +328,27 @@ export const DossierDetails = () => {
                   <dd className="text-sm font-semibold text-gray-700">{dossier.numero_enregistrement || '-'}</dd>
                 </div>
                 
-                <div>
-                  <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Orientation</dt>
-                  <dd className="text-sm font-semibold text-gray-700">{dossier.orientation || '-'}</dd>
+                <div className="sm:col-span-2">
+                  <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Orientation (Services)</dt>
+                  <dd className="text-sm font-semibold text-gray-700">
+                    {(() => {
+                      const orientations = parseOrientations(dossier.orientation, dossier.annotation);
+                      if (orientations.length === 0) return '-';
+                      
+                      return (
+                        <div className="space-y-4 mt-2">
+                          {orientations.map((o, idx) => (
+                            <div key={idx} className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                              <div className="font-bold text-blue-900 mb-1">{o.service || 'Non spécifié'}</div>
+                              {o.annotation && (
+                                <div className="text-sm text-blue-800/80 italic">{o.annotation}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </dd>
                 </div>
 
                 <div>
@@ -313,13 +357,6 @@ export const DossierDetails = () => {
                 </div>
                 
                 <div className="sm:col-span-2 pt-6 border-t border-gray-50">
-                  <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Annotation</dt>
-                  <dd className="text-sm text-gray-600 bg-gray-50 p-4 rounded-2xl italic">
-                    {dossier.annotation || 'Aucune annotation particulière.'}
-                  </dd>
-                </div>
-                
-                <div className="sm:col-span-2">
                   <dt className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Observation</dt>
                   <dd className="text-sm text-gray-600">
                     {dossier.observation || 'Aucune observation enregistrée.'}
@@ -456,23 +493,57 @@ export const DossierDetails = () => {
                 </select>
               </div>
 
-              <div>
-                <label htmlFor="orientation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Orientation / Service (Destination)
-                </label>
-                <input
-                  type="text"
-                  id="orientation"
-                  className="block w-full rounded-xl border-gray-200 py-3 px-4 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all"
-                  placeholder="Nom du service..."
-                  value={departData.orientation}
-                  onChange={(e) => setDepartData({ ...departData, orientation: e.target.value })}
-                />
+              <div className="space-y-4">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest">
+                    Orientations (Services) <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addOrientation}
+                    className="text-xs text-blue-600 font-bold hover:text-blue-700 bg-blue-50 px-2 py-1 rounded"
+                  >
+                    + Ajouter
+                  </button>
+                </div>
+                
+                {orientationsList.map((item, index) => (
+                  <div key={index} className="pl-4 border-l-2 border-blue-500 space-y-3 relativ bg-gray-50 p-4 rounded-xl relative">
+                    {orientationsList.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeOrientation(index)}
+                        className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                    <div>
+                      <input
+                        type="text"
+                        required
+                        className="block w-full rounded-xl border-gray-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all"
+                        placeholder="Nom du service..."
+                        value={item.service}
+                        onChange={(e) => updateOrientation(index, 'service', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <textarea
+                        rows={2}
+                        className="block w-full rounded-xl border-gray-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all resize-none"
+                        placeholder="Note ou annotation liée à ce départ..."
+                        value={item.annotation}
+                        onChange={(e) => updateOrientation(index, 'annotation', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div>
                 <label htmlFor="num_orientation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Numéro d'Orientation
+                  Numéro d'Orientation Global
                 </label>
                 <input
                   type="text"
@@ -481,20 +552,6 @@ export const DossierDetails = () => {
                   placeholder="Numéro de transmission..."
                   value={departData.numero_orientation}
                   onChange={(e) => setDepartData({ ...departData, numero_orientation: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="annotation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Annotation
-                </label>
-                <textarea
-                  id="annotation"
-                  rows={3}
-                  className="block w-full rounded-xl border-gray-200 py-3 px-4 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all resize-none"
-                  placeholder="Note ou annotation liée à ce départ..."
-                  value={departData.annotation}
-                  onChange={(e) => setDepartData({ ...departData, annotation: e.target.value })}
                 />
               </div>
 

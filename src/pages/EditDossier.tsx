@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, X } from 'lucide-react';
+import { parseOrientations } from '../lib/orientationUtils';
 
 export const EditDossier = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,11 +21,28 @@ export const EditDossier = () => {
     date_arrivee: '',
     numero_enregistrement: '',
     numero_orientation: '',
-    orientation: '',
-    annotation: '',
     observation: '',
     statut: ''
   });
+
+  const [orientationsList, setOrientationsList] = useState([
+    { service: '', annotation: '' }
+  ]);
+
+  const addOrientation = () => {
+    setOrientationsList([...orientationsList, { service: '', annotation: '' }]);
+  };
+
+  const updateOrientation = (index: number, field: string, value: string) => {
+    const newList = [...orientationsList];
+    newList[index] = { ...newList[index], [field]: value };
+    setOrientationsList(newList);
+  };
+
+  const removeOrientation = (index: number) => {
+    const newList = orientationsList.filter((_, i) => i !== index);
+    setOrientationsList(newList);
+  };
 
   useEffect(() => {
     const fetchDossier = async () => {
@@ -50,6 +68,12 @@ export const EditDossier = () => {
             setOriginalDossier(null);
           } else {
             setOriginalDossier(foundDossier);
+            
+            const parsedList = parseOrientations(foundDossier.orientation, foundDossier.annotation);
+            if (parsedList.length > 0) {
+              setOrientationsList(parsedList);
+            }
+
             setFormData({
               type_dossier: foundDossier.type_dossier || 'Arrivée',
               objet: foundDossier.objet || '',
@@ -58,8 +82,6 @@ export const EditDossier = () => {
               date_arrivee: foundDossier.date_arrivee || '',
               numero_enregistrement: foundDossier.numero_enregistrement || '',
               numero_orientation: foundDossier.numero_orientation || '',
-              orientation: foundDossier.orientation || '',
-              annotation: foundDossier.annotation || '',
               observation: foundDossier.observation || '',
               statut: foundDossier.statut || 'Reçu'
             });
@@ -81,9 +103,19 @@ export const EditDossier = () => {
 
     try {
       if (id && user) {
+        const validOrientations = orientationsList.filter(o => o.service.trim() !== '');
+        const orientationsStr = JSON.stringify(validOrientations);
+        const combinedAnnotations = validOrientations.map(o => o.annotation).filter(a => a).join(' | ');
+
+        const updatePayload = {
+          ...formData,
+          orientation: orientationsStr,
+          annotation: combinedAnnotations
+        };
+
         const { error } = await supabase
           .from('dossiers')
-          .update(formData)
+          .update(updatePayload)
           .eq('id', id);
 
         if (error) throw error;
@@ -263,25 +295,63 @@ export const EditDossier = () => {
                 </select>
               </div>
 
-              <div className="sm:col-span-2">
-                <label htmlFor="orientation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Orientation (Service) {formData.type_dossier === 'Départ' && <span className="text-red-500">*</span>}
-                </label>
-                <input
-                  type="text"
-                  name="orientation"
-                  id="orientation"
-                  required={formData.type_dossier === 'Départ'}
-                  disabled={formData.type_dossier !== 'Départ'}
-                  value={formData.orientation}
-                  onChange={handleChange}
-                  className={`block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all ${formData.type_dossier !== 'Départ' ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`}
-                />
-              </div>
+              {formData.type_dossier === 'Départ' ? (
+                <div className="sm:col-span-2 space-y-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest">
+                      Orientations (Services) <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addOrientation}
+                      className="text-xs text-blue-600 font-bold hover:text-blue-700 bg-blue-50 px-2 py-1 rounded"
+                    >
+                      + Ajouter
+                    </button>
+                  </div>
+                  
+                  {orientationsList.map((item, index) => (
+                    <div key={index} className="pl-4 border-l-2 border-blue-500 space-y-3 relativ bg-gray-50 p-4 rounded-xl relative">
+                      {orientationsList.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeOrientation(index)}
+                          className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                      <div>
+                        <input
+                          type="text"
+                          required
+                          className="block w-full rounded-xl border-gray-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all"
+                          placeholder="Nom du service..."
+                          value={item.service}
+                          onChange={(e) => updateOrientation(index, 'service', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <textarea
+                          rows={2}
+                          className="block w-full rounded-xl border-gray-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all resize-none"
+                          placeholder="Note ou annotation..."
+                          value={item.annotation}
+                          onChange={(e) => updateOrientation(index, 'annotation', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="sm:col-span-2 p-6 rounded-2xl bg-gray-50 border border-gray-100 italic text-sm text-gray-500 text-center">
+                  Les orientations ne sont actives qu'en mode "Départ".
+                </div>
+              )}
 
               <div className="sm:col-span-2">
                 <label htmlFor="numero_orientation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Numéro d'Orientation
+                  Numéro d'Orientation Global
                 </label>
                 <input
                   type="text"
@@ -297,22 +367,6 @@ export const EditDossier = () => {
                     Même numéro que l'enregistrement (interne) ou nouveau numéro (externe).
                   </p>
                 )}
-              </div>
-
-              <div className="sm:col-span-2">
-                <label htmlFor="annotation" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">
-                  Annotation {formData.type_dossier === 'Départ' && <span className="text-red-500">*</span>}
-                </label>
-                <textarea
-                  id="annotation"
-                  name="annotation"
-                  required={formData.type_dossier === 'Départ'}
-                  disabled={formData.type_dossier !== 'Départ'}
-                  rows={3}
-                  value={formData.annotation}
-                  onChange={handleChange}
-                  className={`block w-full rounded-xl border-gray-200 py-3 px-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 border transition-all resize-none ${formData.type_dossier !== 'Départ' ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`}
-                />
               </div>
 
               <div className="sm:col-span-2">

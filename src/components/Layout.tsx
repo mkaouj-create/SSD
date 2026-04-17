@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2, Plus, X } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2, Plus, X, MessageSquare, BarChart2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -11,6 +11,10 @@ export const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+
+  const [hasNewMessages, setHasNewMessages] = useState(() => {
+    return localStorage.getItem(`newMessages_${bureauId}`) === 'true';
+  });
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,6 +69,43 @@ export const Layout = () => {
     const debounceTimer = setTimeout(searchDossiers, 300);
     return () => clearTimeout(debounceTimer);
   }, [searchQuery, bureauId]);
+
+  useEffect(() => {
+    // Clear chat dot when visiting the chat route
+    if (location.pathname === '/chat') {
+      setHasNewMessages(false);
+      if (bureauId) {
+        localStorage.setItem(`newMessages_${bureauId}`, 'false');
+      }
+    }
+  }, [location.pathname, bureauId]);
+
+  useEffect(() => {
+    if (!bureauId) return;
+
+    const channel = supabase
+      .channel('public:messages_layout')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `bureau_id=eq.${bureauId}`
+        },
+        () => {
+          if (window.location.pathname !== '/chat') {
+            setHasNewMessages(true);
+            localStorage.setItem(`newMessages_${bureauId}`, 'true');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [bureauId]);
 
   const fetchNotifications = async () => {
     if (bureauId) {
@@ -129,17 +170,19 @@ export const Layout = () => {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Dossiers', href: '/dossiers', icon: FolderOpen },
     { name: 'Nouveau', href: '/dossiers/new', icon: Plus, mobileOnly: true },
+    { name: 'Statistiques', href: '/statistics', icon: BarChart2 },
+    { name: 'Équipe', href: '/chat', icon: MessageSquare },
     { name: 'Utilisateurs', href: '/users', icon: Users },
     { name: 'Paramètres', href: '/settings', icon: Settings },
   ];
 
   if (role === 'admin' || role === 'Super_admin' || hasPermission('manage_roles')) {
-    navigation.splice(3, 0, { name: 'Rôles', href: '/roles', icon: Shield });
+    navigation.splice(5, 0, { name: 'Rôles', href: '/roles', icon: Shield });
   }
 
   if (role === 'Super_admin') {
-    navigation.splice(4, 0, { name: 'Demandes', href: '/admin-requests', icon: Users });
-    navigation.splice(5, 0, { name: 'Bureaux', href: '/bureaus', icon: Building2 });
+    navigation.splice(navigation.length - 1, 0, { name: 'Demandes', href: '/admin-requests', icon: Users });
+    navigation.splice(navigation.length - 1, 0, { name: 'Bureaux', href: '/bureaus', icon: Building2 });
   }
 
   return (
@@ -173,7 +216,13 @@ export const Layout = () => {
                       }`}
                       aria-hidden="true"
                     />
-                    {item.name}
+                    <span className="flex-1">{item.name}</span>
+                    {item.name === 'Équipe' && hasNewMessages && (
+                      <span className="flex h-2.5 w-2.5 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -349,8 +398,14 @@ export const Layout = () => {
                   isActive ? 'text-blue-600' : 'text-gray-400'
                 }`}
               >
-                <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-blue-50' : ''}`}>
+                <div className={`p-1.5 rounded-xl transition-all relative ${isActive ? 'bg-blue-50' : ''}`}>
                   <item.icon className={`h-5 w-5 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                  {item.name === 'Équipe' && hasNewMessages && (
+                    <span className="absolute top-1 right-1 flex h-2 w-2">
+                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                  )}
                 </div>
                 <span className={`text-[10px] font-black uppercase tracking-tighter mt-1 truncate w-full text-center ${isActive ? 'opacity-100' : 'opacity-60'}`}>
                   {item.name}
@@ -385,7 +440,13 @@ export const Layout = () => {
                     }`}
                   >
                     <item.icon className="mr-3 h-5 w-5" />
-                    {item.name}
+                    <span className="flex-1">{item.name}</span>
+                    {item.name === 'Équipe' && hasNewMessages && (
+                      <span className="flex h-2.5 w-2.5 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                      </span>
+                    )}
                   </Link>
                 );
               })}

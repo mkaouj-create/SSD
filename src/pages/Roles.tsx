@@ -88,6 +88,17 @@ export const Roles = () => {
 
     try {
       if (editingRole) {
+        // SYNCHRONIZATION: Update the role name in the profiles table if the name was changed
+        if (editingRole.name !== formData.name) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ role: formData.name })
+            .eq('role', editingRole.name)
+            .eq('bureau_id', bureauId);
+            
+          if (profileError) console.error("Error updating profiles with new role name:", profileError);
+        }
+
         const { error } = await supabase
           .from('roles')
           .update({
@@ -122,6 +133,17 @@ export const Roles = () => {
   const handleDelete = async () => {
     if (showDeleteModal) {
       try {
+        // Find the role name being deleted to sync with users
+        const roleToDelete = roles.find(r => r.id === showDeleteModal);
+        if (roleToDelete && bureauId) {
+           // SYNCHRONIZATION: Reset users who had this role to 'agent'
+           await supabase
+            .from('profiles')
+            .update({ role: 'agent' })
+            .eq('role', roleToDelete.name)
+            .eq('bureau_id', bureauId);
+        }
+
         const { error } = await supabase
           .from('roles')
           .delete()

@@ -16,6 +16,9 @@ export const UsersList = () => {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editUserData, setEditUserData] = useState({ full_name: '', role: '' });
   
   const [newUser, setNewUser] = useState({ email: '', full_name: '', role: 'agent', password: '' });
 
@@ -152,6 +155,30 @@ export const UsersList = () => {
     } catch (err: any) {
       console.error(err);
       alert(err.message || "Une erreur est survenue lors de la création de l'utilisateur.");
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          full_name: editUserData.full_name,
+          role: editUserData.role 
+        })
+        .eq('id', editingUser.id);
+        
+      if (error) throw error;
+      
+      setShowEditModal(false);
+      setEditingUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      console.error('Error updating profile:', err);
+      alert('Erreur lors de la mise à jour du profil.');
     }
   };
 
@@ -345,6 +372,67 @@ export const UsersList = () => {
         </div>
       )}
 
+      {/* Edit User Modal */}
+      {showEditModal && editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-md p-4">
+          <div className="w-full max-w-lg rounded-[2.5rem] bg-white p-10 shadow-2xl border border-gray-100">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-3xl font-black text-gray-900 tracking-tight">Modifier l'accès</h3>
+                <p className="text-sm text-gray-500 font-medium mt-1">Mettez à jour le rôle ou le nom de l'utilisateur.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Nom Complet</label>
+                  <input
+                    type="text"
+                    required
+                    value={editUserData.full_name}
+                    onChange={e => setEditUserData({...editUserData, full_name: e.target.value})}
+                    className="block w-full rounded-2xl border-gray-200 bg-gray-50/50 px-4 py-4 text-sm font-bold text-gray-900 focus:border-blue-500 focus:ring-blue-500 border"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Rôle Assigné</label>
+                  <div className="relative">
+                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <select
+                      value={editUserData.role}
+                      onChange={e => setEditUserData({...editUserData, role: e.target.value})}
+                      className="block w-full rounded-2xl border-gray-200 bg-gray-50/50 pl-12 pr-10 py-4 text-sm font-bold text-gray-900 focus:border-blue-500 focus:ring-blue-500 border appearance-none cursor-pointer"
+                    >
+                      {roles.map(r => (
+                        <option key={r.id} value={r.name}>{r.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-10 flex items-center space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 px-6 py-4 rounded-2xl border-2 border-gray-100 bg-white text-sm font-black text-gray-500 hover:bg-gray-50 hover:border-gray-200 transition-all"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="flex-[2] px-6 py-4 rounded-2xl border border-transparent bg-blue-600 text-sm font-black text-white hover:bg-blue-700 shadow-xl shadow-blue-200"
+                >
+                  Mettre à jour
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
@@ -429,13 +517,26 @@ export const UsersList = () => {
                     </td>
                     <td className="px-8 py-5 whitespace-nowrap text-right">
                       {hasPermission('manage_users') && u.id !== currentUser?.id && (
-                        <button
-                          onClick={() => setShowDeleteModal(u.id)}
-                          className="text-red-400 hover:text-red-600 p-2.5 rounded-xl hover:bg-red-50 transition-all"
-                          title="Supprimer l'utilisateur"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => {
+                              setEditingUser(u);
+                              setEditUserData({ full_name: u.full_name || '', role: u.role });
+                              setShowEditModal(true);
+                            }}
+                            className="text-blue-400 hover:text-blue-600 p-2.5 rounded-xl hover:bg-blue-50 transition-all"
+                            title="Modifier l'utilisateur"
+                          >
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                          </button>
+                          <button
+                            onClick={() => setShowDeleteModal(u.id)}
+                            className="text-red-400 hover:text-red-600 p-2.5 rounded-xl hover:bg-red-50 transition-all"
+                            title="Supprimer l'utilisateur"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -477,12 +578,24 @@ export const UsersList = () => {
                     {u.role}
                   </span>
                   {hasPermission('manage_users') && u.id !== currentUser?.id && (
-                    <button
-                      onClick={() => setShowDeleteModal(u.id)}
-                      className="text-red-400 p-1.5"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => {
+                          setEditingUser(u);
+                          setEditUserData({ full_name: u.full_name || '', role: u.role });
+                          setShowEditModal(true);
+                        }}
+                        className="text-blue-400 p-1.5"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteModal(u.id)}
+                        className="text-red-400 p-1.5"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

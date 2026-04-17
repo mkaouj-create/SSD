@@ -20,6 +20,8 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Layout } from './components/Layout';
 import { SharedLogin } from './pages/SharedLogin';
 import { VaguemestrePortal } from './pages/VaguemestrePortal';
+import { Chat } from './pages/Chat';
+import { Statistics } from './pages/Statistics';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, isLoading, status, user } = useAuth();
@@ -85,8 +87,10 @@ export default function App() {
             <Route path="/dossiers/new" element={<NewDossier />} />
             <Route path="/dossiers/:id" element={<DossierDetails />} />
             <Route path="/dossiers/:id/edit" element={<EditDossier />} />
+            <Route path="/statistics" element={<Statistics />} />
             <Route path="/users" element={<UsersList />} />
             <Route path="/roles" element={<Roles />} />
+            <Route path="/chat" element={<Chat />} />
             <Route path="/admin-requests" element={<AdminRequests />} />
             <Route path="/bureaus" element={<BureausList />} />
             <Route path="/settings" element={<Settings />} />

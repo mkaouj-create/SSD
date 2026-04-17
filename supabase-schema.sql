@@ -458,3 +458,38 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Messages Table for Bureau Chat
+CREATE TABLE IF NOT EXISTS public.messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    bureau_id UUID REFERENCES public.bureaus(id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS for messages
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+-- Messages Policies
+CREATE POLICY "Users can view messages in their bureau"
+    ON public.messages FOR SELECT
+    USING (
+        bureau_id IN (
+            SELECT bureau_id FROM public.profiles WHERE id = auth.uid()
+        )
+        OR 
+        (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'Super_admin'
+    );
+
+CREATE POLICY "Users can insert messages in their bureau"
+    ON public.messages FOR INSERT
+    WITH CHECK (
+        bureau_id IN (
+            SELECT bureau_id FROM public.profiles WHERE id = auth.uid()
+        ) 
+        AND sender_id = auth.uid()
+    );
+
+-- Add to Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;

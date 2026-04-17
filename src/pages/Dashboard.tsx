@@ -13,8 +13,10 @@ export const Dashboard = () => {
     termines: 0,
     enRetard: 0,
     completionRate: 0,
-    recentCount: 0, // Added in the last 7 days
+    recentCount: 0,
   });
+  
+  const [dossiers, setDossiers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +45,8 @@ export const Dashboard = () => {
       }
 
       if (bureauDossiers) {
+        setDossiers(bureauDossiers);
+        
         const today = new Date().toISOString().split('T')[0];
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
