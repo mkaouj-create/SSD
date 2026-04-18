@@ -98,7 +98,7 @@ export const DossiersList = () => {
     
     const matchesSearch = 
       (d.numero_enregistrement && d.numero_enregistrement.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      d.objet.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (d.numero_expediteur && d.numero_expediteur.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (d.expediteur && d.expediteur.toLowerCase().includes(searchTerm.toLowerCase()));
     
     return matchesTab && matchesSearch;
@@ -156,7 +156,7 @@ export const DossiersList = () => {
           <input
             type="text"
             className="block w-full rounded-xl border-gray-200 py-2.5 pl-10 pr-3 text-sm focus:border-blue-500 focus:ring-blue-500 border transition-all"
-            placeholder="Rechercher par n° d'enregistrement, objet ou expéditeur..."
+            placeholder="Rechercher par n° d'enregistrement, service ou expéditeur..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

@@ -51,9 +51,9 @@ export const Layout = () => {
       try {
         const { data, error } = await supabase
           .from('dossiers')
-          .select('id, tracking_code, objet, expediteur, numero_enregistrement')
+          .select('id, tracking_code, objet, expediteur, numero_enregistrement, numero_expediteur')
           .eq('bureau_id', bureauId)
-          .or(`numero_enregistrement.ilike.%${searchQuery}%,objet.ilike.%${searchQuery}%,expediteur.ilike.%${searchQuery}%,tracking_code.ilike.%${searchQuery}%`)
+          .or(`numero_enregistrement.ilike.%${searchQuery}%,numero_expediteur.ilike.%${searchQuery}%,expediteur.ilike.%${searchQuery}%`)
           .limit(5);
 
         if (!error && data) {
@@ -174,9 +174,13 @@ export const Layout = () => {
     { name: 'Équipe', href: '/chat', icon: MessageSquare },
     { name: 'Utilisateurs', href: '/users', icon: Users },
     { name: 'Paramètres', href: '/settings', icon: Settings },
-  ];
+  ].filter(item => {
+    // Masquer "Équipe" pour les admins sur demande utilisateur
+    if (role === 'admin' && item.name === 'Équipe') return false;
+    return true;
+  });
 
-  if (role === 'admin' || role === 'Super_admin' || hasPermission('manage_roles')) {
+  if (role === 'Super_admin' || (role !== 'admin' && hasPermission('manage_roles'))) {
     navigation.splice(5, 0, { name: 'Rôles', href: '/roles', icon: Shield });
   }
 
@@ -388,7 +392,7 @@ export const Layout = () => {
       {/* Bottom Navigation for Mobile */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-lg border-t border-gray-100 px-2 pb-safe-area-inset-bottom">
         <nav className="flex items-center justify-around h-16">
-          {navigation.filter(item => !['Rôles', 'Demandes', 'Bureaux'].includes(item.name)).map((item) => {
+          {navigation.filter(item => !['Rôles', 'Demandes', 'Bureaux', 'Demandes'].includes(item.name)).map((item) => {
             const isActive = location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href));
             return (
               <Link
@@ -480,7 +484,7 @@ export const Layout = () => {
                 <Search className="absolute left-3 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Rechercher un dossier (numéro, objet, expéditeur)..."
+                  placeholder="Rechercher (numéro, service, expéditeur)..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
