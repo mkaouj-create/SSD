@@ -132,7 +132,7 @@ export const NewDossier = () => {
                     <input type="radio" name="type_dossier" value="Arrivée" checked={formData.type_dossier === 'Arrivée'} onChange={handleChange} className="sr-only" />
                     <span className="font-black text-lg">Arrivée</span>
                   </label>
-                  {(role === 'admin' || role === 'Secrétaire Départ' || role === 'Super_admin' || role === 'Secrétaire') && (
+                  {(role !== 'Secrétaire Arrivée') && (role === 'admin' || role === 'Secrétaire Départ' || role === 'Super_admin' || role === 'Secrétaire') && (
                     <label className={`flex-1 flex items-center justify-center px-4 py-4 rounded-xl border-2 cursor-pointer transition-all ${formData.type_dossier === 'Départ' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-blue-200'}`}>
                       <input type="radio" name="type_dossier" value="Départ" checked={formData.type_dossier === 'Départ'} onChange={handleChange} className="sr-only" />
                       <span className="font-black text-lg">Départ</span>
