@@ -16,13 +16,15 @@ export const UsersList = () => {
   ]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
+  const [inviteRoleName, setInviteRoleName] = useState('Secrétaire Arrivée');
   
-  const generateInviteLink = () => {
+  const generateInviteLink = (inviteRole: string) => {
     if (!bureauId) return;
     const baseUrl = window.location.origin;
-    const params = btoa(unescape(encodeURIComponent(JSON.stringify({ b: bureauId, r: 'Secrétaire Arrivée' }))));
+    const params = btoa(unescape(encodeURIComponent(JSON.stringify({ b: bureauId, r: inviteRole }))));
     const link = `${baseUrl}/register?invite=${params}`;
     setInviteLink(link);
+    setInviteRoleName(inviteRole);
     setShowInviteModal(true);
   };
 
@@ -239,10 +241,16 @@ export const UsersList = () => {
         {hasPermission('manage_users') && (
           <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex sm:items-center space-x-3">
             <button
-              onClick={generateInviteLink}
+              onClick={() => generateInviteLink('Secrétaire Arrivée')}
               className="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-5 py-2.5 text-sm font-bold text-blue-700 shadow-sm hover:bg-blue-100 transition-all"
             >
               Lien Secrétaire Arrivée
+            </button>
+            <button
+              onClick={() => generateInviteLink('Secrétaire Départ')}
+              className="inline-flex items-center justify-center rounded-xl border border-orange-200 bg-orange-50 px-5 py-2.5 text-sm font-bold text-orange-700 shadow-sm hover:bg-orange-100 transition-all"
+            >
+              Lien Secrétaire Départ
             </button>
             <button
               onClick={() => {
@@ -492,7 +500,9 @@ export const UsersList = () => {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-3xl font-black text-gray-900 tracking-tight">Lien d'invitation</h3>
-                <p className="text-sm text-gray-500 font-medium mt-1">Partagez ce lien pour recruter un Secrétaire Arrivée.</p>
+                <p className="text-sm text-gray-500 font-medium mt-1">
+                  Partagez ce lien pour recruter un <span className="text-blue-600 font-black">{inviteRoleName}</span>.
+                </p>
               </div>
             </div>
 

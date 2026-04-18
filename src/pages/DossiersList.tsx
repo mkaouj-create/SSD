@@ -6,12 +6,12 @@ import { Plus, Search, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 
 export const DossiersList = () => {
-  const { bureauId, role, user } = useAuth();
+  const { bureauId, role, user, hasPermission } = useAuth();
   const [dossiers, setDossiers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('Arrivée');
+  const [activeTab, setActiveTab] = useState(role === 'Secrétaire Départ' ? 'Départ' : 'Arrivée');
   const [statusFilter, setStatusFilter] = useState('');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
@@ -32,7 +32,7 @@ export const DossiersList = () => {
       }
       
       // If user is not admin or Super_admin, they only see their own dossiers
-      if (role !== 'admin' && role !== 'Super_admin' && role !== 'Secrétaire') {
+      if (role !== 'admin' && role !== 'Super_admin' && role !== 'Secrétaire' && role !== 'Secrétaire Arrivée' && role !== 'Secrétaire Départ' && role !== 'Vagmeustre') {
         query = query.eq('user_id', user?.id);
       }
       
@@ -124,7 +124,7 @@ export const DossiersList = () => {
             Gérez et suivez l'évolution de tous les dossiers de votre bureau.
           </p>
         </div>
-        {(role === 'admin' || role === 'agent') && (
+        {hasPermission('manage_dossiers') && (
           <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
             <Link
               to="/dossiers/new"
@@ -138,12 +138,14 @@ export const DossiersList = () => {
       </div>
 
       <div className="flex space-x-2 mb-6">
-        <button
-          onClick={() => setActiveTab('Arrivée')}
-          className={`px-6 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'Arrivée' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
-        >
-          Dossiers Arrivée
-        </button>
+        {role !== 'Secrétaire Départ' && (
+          <button
+            onClick={() => setActiveTab('Arrivée')}
+            className={`px-6 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'Arrivée' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+          >
+            Dossiers Arrivée
+          </button>
+        )}
         {role !== 'Secrétaire Arrivée' && (
           <button
             onClick={() => setActiveTab('Départ')}

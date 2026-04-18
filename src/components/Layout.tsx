@@ -169,20 +169,20 @@ export const Layout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Dossiers', href: '/dossiers', icon: FolderOpen },
-    { name: 'Nouveau', href: '/dossiers/new', icon: Plus, mobileOnly: true },
+    { name: 'Nouveau', href: '/dossiers/new', icon: Plus },
     { name: 'Statistiques', href: '/statistics', icon: BarChart2 },
     { name: 'Équipe', href: '/chat', icon: MessageSquare },
     { name: 'Utilisateurs', href: '/users', icon: Users },
     { name: 'Paramètres', href: '/settings', icon: Settings },
   ].filter(item => {
-    // Masquer "Équipe" pour les admins et secrétaire arrivée sur demande utilisateur
-    if ((role === 'admin' || role === 'Secrétaire Arrivée') && item.name === 'Équipe') return false;
-    // Secrétaire arrivée ne voit pas les utilisateurs non plus
-    if (role === 'Secrétaire Arrivée' && item.name === 'Utilisateurs') return false;
+    // Masquer "Équipe" pour les admins et secrétaire arrivée/départ sur demande utilisateur
+    if ((role === 'admin' || role === 'Secrétaire Arrivée' || role === 'Secrétaire Départ') && item.name === 'Équipe') return false;
+    // Secrétaire arrivée/départ ne voit pas les utilisateurs, statistiques et paramètres
+    if ((role === 'Secrétaire Arrivée' || role === 'Secrétaire Départ') && (item.name === 'Utilisateurs' || item.name === 'Statistiques' || item.name === 'Paramètres')) return false;
     return true;
   });
 
-  if (role === 'Super_admin' || (role !== 'admin' && role !== 'Secrétaire Arrivée' && hasPermission('manage_roles'))) {
+  if (role === 'Super_admin' || (role !== 'admin' && role !== 'Secrétaire Arrivée' && role !== 'Secrétaire Départ' && hasPermission('manage_roles'))) {
     navigation.splice(5, 0, { name: 'Rôles', href: '/roles', icon: Shield });
   }
 
@@ -204,7 +204,7 @@ export const Layout = () => {
           </div>
           <div className="flex flex-1 flex-col">
             <nav className="flex-1 space-y-2 pb-4">
-              {navigation.filter(item => !item.mobileOnly).map((item) => {
+              {navigation.map((item) => {
                 const isActive = location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href));
                 return (
                   <Link
@@ -434,7 +434,7 @@ export const Layout = () => {
               <h1 className="text-2xl font-black text-gray-900 tracking-tighter">SSD</h1>
             </div>
             <nav className="flex-1 space-y-2">
-              {navigation.filter(item => !item.mobileOnly).map((item) => {
+              {navigation.map((item) => {
                 const isActive = location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href));
                 return (
                   <Link

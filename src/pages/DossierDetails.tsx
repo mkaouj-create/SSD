@@ -144,9 +144,12 @@ export const DossierDetails = () => {
       if (foundDossier) {
         if (role !== 'Super_admin' && foundDossier.bureau_id !== bureauId) {
           setDossier(null);
-        } else if (role !== 'admin' && role !== 'Super_admin' && role !== 'Secrétaire' && role !== 'Secrétaire Arrivée' && foundDossier.user_id !== user?.id) {
+        } else if (role !== 'admin' && role !== 'Super_admin' && role !== 'Secrétaire' && role !== 'Secrétaire Arrivée' && role !== 'Secrétaire Départ' && foundDossier.user_id !== user?.id) {
           setDossier(null);
         } else if (role === 'Secrétaire Arrivée' && (foundDossier.type_dossier === 'Départ' || foundDossier.statut === 'Transmis')) {
+          setDossier(null);
+        } else if (role === 'Secrétaire Départ' && (foundDossier.type_dossier === 'Arrivée' && foundDossier.statut !== 'Transmis' && foundDossier.statut !== 'En cours')) {
+          // Secrétaire Départ can only see Départ/Transmis dossiers + those ready for departure (En cours)
           setDossier(null);
         } else {
           setDossier(foundDossier);
@@ -197,6 +200,19 @@ export const DossierDetails = () => {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const canEditDossier = () => {
+    if (role === 'admin' || role === 'Super_admin' || role === 'Secrétaire') return true;
+    if (role === 'Secrétaire Arrivée') return (dossier.type_dossier === 'Arrivée' && dossier.statut !== 'Transmis');
+    if (role === 'Secrétaire Départ') return (dossier.type_dossier === 'Départ' || dossier.statut === 'Transmis');
+    return dossier.user_id === user?.id;
+  };
+
+  const canTransmitDossier = () => {
+    if (role === 'admin' || role === 'Super_admin' || role === 'Secrétaire') return true;
+    if (role === 'Secrétaire Départ') return (dossier.type_dossier === 'Arrivée' && dossier.statut !== 'Transmis');
+    return false;
   };
 
   if (loading) {
@@ -250,35 +266,41 @@ export const DossierDetails = () => {
         <div className="flex items-center space-x-3">
           {hasPermission('manage_dossiers') && (
             <>
-              <button
-                onClick={() => {
-                  setDepartData({
-                    statut: dossier.statut || 'Transmis',
-                    orientation: dossier.orientation || '',
-                    numero_orientation: dossier.numero_orientation || dossier.numero_enregistrement || '',
-                    annotation: dossier.annotation || ''
-                  });
-                  setShowTransmitModal(true);
-                }}
-                className="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
-              >
-                <Activity className="mr-2 h-4 w-4" />
-                Transmettre
-              </button>
-              <Link
-                to={`/dossiers/${dossier.id}/edit`}
-                className="inline-flex items-center px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50 transition-all"
-              >
-                <Edit className="mr-2 h-4 w-4 text-gray-400" />
-                Modifier
-              </Link>
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="inline-flex items-center px-4 py-2 rounded-xl bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 transition-all"
-              >
-                <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                Supprimer
-              </button>
+              {canTransmitDossier() && (
+                <button
+                  onClick={() => {
+                    setDepartData({
+                      statut: dossier.statut || 'Transmis',
+                      orientation: dossier.orientation || '',
+                      numero_orientation: dossier.numero_orientation || dossier.numero_enregistrement || '',
+                      annotation: dossier.annotation || ''
+                    });
+                    setShowTransmitModal(true);
+                  }}
+                  className="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+                >
+                  <Activity className="mr-2 h-4 w-4" />
+                  Transmettre
+                </button>
+              )}
+              {canEditDossier() && (
+                <>
+                  <Link
+                    to={`/dossiers/${dossier.id}/edit`}
+                    className="inline-flex items-center px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50 transition-all"
+                  >
+                    <Edit className="mr-2 h-4 w-4 text-gray-400" />
+                    Modifier
+                  </Link>
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="inline-flex items-center px-4 py-2 rounded-xl bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 transition-all"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                    Supprimer
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
