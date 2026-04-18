@@ -169,7 +169,6 @@ export const Layout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Dossiers', href: '/dossiers', icon: FolderOpen },
-    { name: 'Nouveau', href: '/dossiers/new', icon: Plus },
     { name: 'Statistiques', href: '/statistics', icon: BarChart2 },
     { name: 'Équipe', href: '/chat', icon: MessageSquare },
     { name: 'Utilisateurs', href: '/users', icon: Users },
