@@ -65,9 +65,9 @@ export const DossierDetails = () => {
     }
   };
 
-  const handleTransmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id) return;
+  const handleTransmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!id || !user) return;
 
     setIsTransmitting(true);
     try {
@@ -115,6 +115,7 @@ export const DossierDetails = () => {
         }
       ]);
 
+      setShowTransmitConfirm(false);
       setShowTransmitModal(false);
       setDepartData({ statut: 'Transmis', numero_orientation: '' });
       setOrientationsList([{ service: '', annotation: '' }]);
@@ -126,6 +127,8 @@ export const DossierDetails = () => {
       setIsTransmitting(false);
     }
   };
+
+  const [showTransmitConfirm, setShowTransmitConfirm] = useState(false);
 
   const fetchData = async () => {
     if (!bureauId && role !== 'Super_admin') return;
@@ -225,6 +228,38 @@ export const DossierDetails = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
+      {/* Transmit UI Confirmation Modal */}
+      {showTransmitConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-md p-4">
+          <div className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-2xl border border-gray-100 transform transition-all">
+            <div className="flex items-center space-x-4 text-blue-600 mb-6">
+              <div className="h-14 w-14 bg-blue-50 rounded-2xl flex items-center justify-center">
+                <Activity className="h-8 w-8" />
+              </div>
+              <h3 className="text-2xl font-black tracking-tight text-gray-900">Confirmer le départ ?</h3>
+            </div>
+            <p className="text-gray-600 leading-relaxed font-medium">
+              Voulez-vous vraiment valider le départ de ce dossier ? Cette action l'enregistrera dans le registre de transmission.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setShowTransmitConfirm(false)}
+                className="flex-1 px-6 py-4 rounded-2xl text-sm font-black text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => handleTransmit()}
+                disabled={isTransmitting}
+                className="flex-[2] inline-flex items-center justify-center px-6 py-4 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all disabled:opacity-50"
+              >
+                {isTransmitting ? 'Traitement...' : 'Oui, valider'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
@@ -497,7 +532,7 @@ export const DossierDetails = () => {
               <p className="text-blue-100 text-sm font-medium mt-1">Marquez le départ de ce dossier vers un autre service.</p>
             </div>
             
-            <form onSubmit={handleTransmit} className="p-8 space-y-6">
+            <form onSubmit={(e) => { e.preventDefault(); setShowTransmitConfirm(true); }} className="p-8 space-y-6">
               
               <div>
                 <label htmlFor="statut" className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">

@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS public.dossiers (
     bureau_id UUID NOT NULL REFERENCES public.bureaus(id) ON DELETE CASCADE,
     user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     tracking_code TEXT UNIQUE NOT NULL,
+    type_dossier TEXT NOT NULL DEFAULT 'Arrivée',
     date_arrivee DATE NOT NULL DEFAULT CURRENT_DATE,
     numero_enregistrement TEXT,
     numero_expediteur TEXT,
@@ -299,7 +300,7 @@ TO authenticated
 WITH CHECK (
     bureau_id = get_current_bureau_id() 
     AND 
-    get_current_user_role() IN ('admin', 'agent', 'Secrétaire')
+    get_current_user_role() IN ('admin', 'agent', 'Secrétaire', 'Secrétaire Arrivée', 'Secrétaire Départ')
 );
 
 CREATE POLICY "Authorized users update dossiers" ON public.dossiers FOR UPDATE 
@@ -307,10 +308,10 @@ TO authenticated
 USING (
     bureau_id = get_current_bureau_id() 
     AND 
-    get_current_user_role() IN ('admin', 'agent', 'Secrétaire')
+    get_current_user_role() IN ('admin', 'agent', 'Secrétaire', 'Secrétaire Arrivée', 'Secrétaire Départ')
 )
 WITH CHECK (
-    get_current_user_role() IN ('admin', 'agent', 'Secrétaire')
+    get_current_user_role() IN ('admin', 'agent', 'Secrétaire', 'Secrétaire Arrivée', 'Secrétaire Départ')
 );
 
 CREATE POLICY "Authorized users delete dossiers" ON public.dossiers FOR DELETE 
@@ -318,7 +319,7 @@ TO authenticated
 USING (
     bureau_id = get_current_bureau_id() 
     AND 
-    get_current_user_role() IN ('admin', 'agent', 'Secrétaire')
+    get_current_user_role() IN ('admin', 'agent', 'Secrétaire', 'Secrétaire Arrivée', 'Secrétaire Départ')
 );
 
 CREATE POLICY "Users view transmissions in same bureau" ON public.transmissions FOR SELECT 
@@ -334,7 +335,7 @@ TO authenticated
 WITH CHECK (
     source_bureau_id = get_current_bureau_id() 
     AND 
-    get_current_user_role() IN ('admin', 'agent', 'Secrétaire')
+    get_current_user_role() IN ('admin', 'agent', 'Secrétaire', 'Secrétaire Arrivée', 'Secrétaire Départ')
 );
 
 CREATE POLICY "Users view comments in same bureau" ON public.comments FOR SELECT 

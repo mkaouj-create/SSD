@@ -47,9 +47,11 @@ export const NewDossier = () => {
 
       if (error) throw error;
       navigate('/dossiers');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating dossier:', error);
-      alert('Erreur lors de la création du dossier');
+      const errorMessage = error.message || 'Erreur lors de la création du dossier';
+      const detail = error.details || '';
+      alert(`${errorMessage}\n${detail}\n\nNote: Vérifiez que votre rôle possède les permissions nécessaires (RLS policies).`);
     } finally {
       setLoading(false);
       setShowConfirmModal(false);
