@@ -117,6 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'admin': ['view_dossiers', 'manage_dossiers', 'manage_users', 'manage_roles', 'manage_bureau'],
           'agent': ['view_dossiers', 'manage_dossiers'],
           'Secrétaire': ['view_dossiers', 'manage_dossiers'],
+          'Secrétaire Arrivée': ['view_dossiers', 'manage_dossiers'],
           'Vagmeustre': ['view_dossiers'],
           'client': ['view_dossiers']
         };

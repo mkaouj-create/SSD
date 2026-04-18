@@ -144,7 +144,9 @@ export const DossierDetails = () => {
       if (foundDossier) {
         if (role !== 'Super_admin' && foundDossier.bureau_id !== bureauId) {
           setDossier(null);
-        } else if (role !== 'admin' && role !== 'Super_admin' && role !== 'Secrétaire' && foundDossier.user_id !== user?.id) {
+        } else if (role !== 'admin' && role !== 'Super_admin' && role !== 'Secrétaire' && role !== 'Secrétaire Arrivée' && foundDossier.user_id !== user?.id) {
+          setDossier(null);
+        } else if (role === 'Secrétaire Arrivée' && (foundDossier.type_dossier === 'Départ' || foundDossier.statut === 'Transmis')) {
           setDossier(null);
         } else {
           setDossier(foundDossier);

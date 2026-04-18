@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 
 export const NewDossier = () => {
   const { bureauId, user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const [formData, setFormData] = useState({
     type_dossier: 'Arrivée',
@@ -22,8 +23,8 @@ export const NewDossier = () => {
     observation: ''
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
 
     try {
@@ -51,6 +52,7 @@ export const NewDossier = () => {
       alert('Erreur lors de la création du dossier');
     } finally {
       setLoading(false);
+      setShowConfirmModal(false);
     }
   };
 
@@ -68,6 +70,38 @@ export const NewDossier = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-md p-4">
+          <div className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-2xl border border-gray-100 transform transition-all">
+            <div className="flex items-center space-x-4 text-blue-600 mb-6">
+              <div className="h-14 w-14 bg-blue-50 rounded-2xl flex items-center justify-center">
+                <AlertCircle className="h-8 w-8" />
+              </div>
+              <h3 className="text-2xl font-black tracking-tight text-gray-900">Confirmer l'ajout ?</h3>
+            </div>
+            <p className="text-gray-600 leading-relaxed font-medium">
+              Voulez-vous vraiment enregistrer ce nouveau dossier dans le système ?
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 px-6 py-4 rounded-2xl text-sm font-black text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => handleSubmit()}
+                disabled={loading}
+                className="flex-[2] inline-flex items-center justify-center px-6 py-4 rounded-2xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all disabled:opacity-50"
+              >
+                {loading ? 'Enregistrement...' : 'Oui, enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-8">
         <Link to="/dossiers" className="inline-flex items-center text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -84,7 +118,7 @@ export const NewDossier = () => {
         </div>
         
         <div className="p-8 sm:p-10">
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={(e) => { e.preventDefault(); setShowConfirmModal(true); }} className="space-y-8">
             <div className="grid grid-cols-1 gap-y-8 gap-x-6 sm:grid-cols-2">
               
               <div className="sm:col-span-2">

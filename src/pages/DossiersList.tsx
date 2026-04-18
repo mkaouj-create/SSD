@@ -94,6 +94,10 @@ export const DossiersList = () => {
 
   const filteredDossiers = dossiers.filter(d => {
     const isDepart = (d.type_dossier === 'Départ' || d.statut === 'Transmis');
+    
+    // Si Secrétaire Arrivée, on force le filtre sur Arrivée
+    if (role === 'Secrétaire Arrivée' && isDepart) return false;
+    
     const matchesTab = activeTab === 'Arrivée' ? !isDepart : isDepart;
     
     const matchesSearch = 
@@ -140,12 +144,14 @@ export const DossiersList = () => {
         >
           Dossiers Arrivée
         </button>
-        <button
-          onClick={() => setActiveTab('Départ')}
-          className={`px-6 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'Départ' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
-        >
-          Dossiers Départ
-        </button>
+        {role !== 'Secrétaire Arrivée' && (
+          <button
+            onClick={() => setActiveTab('Départ')}
+            className={`px-6 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'Départ' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+          >
+            Dossiers Départ
+          </button>
+        )}
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8 flex flex-col lg:flex-row gap-4">

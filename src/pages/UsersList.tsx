@@ -10,9 +10,22 @@ export const UsersList = () => {
     { id: '1', name: 'admin' },
     { id: '2', name: 'agent' },
     { id: '3', name: 'Secrétaire' },
-    { id: '4', name: 'Vagmeustre' },
-    { id: '5', name: 'client' }
+    { id: '4', name: 'Secrétaire Arrivée' },
+    { id: '5', name: 'Vagmeustre' },
+    { id: '6', name: 'client' }
   ]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
+  
+  const generateInviteLink = () => {
+    if (!bureauId) return;
+    const baseUrl = window.location.origin;
+    const params = btoa(unescape(encodeURIComponent(JSON.stringify({ b: bureauId, r: 'Secrétaire Arrivée' }))));
+    const link = `${baseUrl}/register?invite=${params}`;
+    setInviteLink(link);
+    setShowInviteModal(true);
+  };
+
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
@@ -66,8 +79,9 @@ export const UsersList = () => {
           { id: '1', name: 'admin' },
           { id: '2', name: 'agent' },
           { id: '3', name: 'Secrétaire' },
-          { id: '4', name: 'Vagmeustre' },
-          { id: '5', name: 'client' }
+          { id: '4', name: 'Secrétaire Arrivée' },
+          { id: '5', name: 'Vagmeustre' },
+          { id: '6', name: 'client' }
         ];
         setRoles(defaultRoles);
         
@@ -83,8 +97,9 @@ export const UsersList = () => {
         { id: '1', name: 'admin' },
         { id: '2', name: 'agent' },
         { id: '3', name: 'Secrétaire' },
-        { id: '4', name: 'Vagmeustre' },
-        { id: '5', name: 'client' }
+        { id: '4', name: 'Secrétaire Arrivée' },
+        { id: '5', name: 'Vagmeustre' },
+        { id: '6', name: 'client' }
       ];
       setRoles(defaultRoles);
       setNewUser(prev => ({
@@ -222,7 +237,13 @@ export const UsersList = () => {
           </p>
         </div>
         {hasPermission('manage_users') && (
-          <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+          <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex sm:items-center space-x-3">
+            <button
+              onClick={generateInviteLink}
+              className="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-5 py-2.5 text-sm font-bold text-blue-700 shadow-sm hover:bg-blue-100 transition-all"
+            >
+              Lien Secrétaire Arrivée
+            </button>
             <button
               onClick={() => {
                 setNewUser({ 
@@ -459,6 +480,44 @@ export const UsersList = () => {
               >
                 Confirmer la suppression
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invitation Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-md p-4">
+          <div className="w-full max-w-lg rounded-[2.5rem] bg-white p-10 shadow-2xl border border-gray-100">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-3xl font-black text-gray-900 tracking-tight">Lien d'invitation</h3>
+                <p className="text-sm text-gray-500 font-medium mt-1">Partagez ce lien pour recruter un Secrétaire Arrivée.</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 break-all font-mono text-xs text-blue-700">
+                {inviteLink}
+              </div>
+              
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteLink);
+                    alert('Lien copié !');
+                  }}
+                  className="flex-1 px-6 py-4 rounded-2xl bg-blue-600 text-sm font-black text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+                >
+                  Copier le lien
+                </button>
+                <button
+                  onClick={() => setShowInviteModal(false)}
+                  className="px-6 py-4 rounded-2xl border-2 border-gray-100 text-sm font-black text-gray-500 hover:bg-gray-50 transition-all"
+                >
+                  Fermer
+                </button>
+              </div>
             </div>
           </div>
         </div>

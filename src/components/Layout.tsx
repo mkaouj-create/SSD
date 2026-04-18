@@ -175,12 +175,14 @@ export const Layout = () => {
     { name: 'Utilisateurs', href: '/users', icon: Users },
     { name: 'Paramètres', href: '/settings', icon: Settings },
   ].filter(item => {
-    // Masquer "Équipe" pour les admins sur demande utilisateur
-    if (role === 'admin' && item.name === 'Équipe') return false;
+    // Masquer "Équipe" pour les admins et secrétaire arrivée sur demande utilisateur
+    if ((role === 'admin' || role === 'Secrétaire Arrivée') && item.name === 'Équipe') return false;
+    // Secrétaire arrivée ne voit pas les utilisateurs non plus
+    if (role === 'Secrétaire Arrivée' && item.name === 'Utilisateurs') return false;
     return true;
   });
 
-  if (role === 'Super_admin' || (role !== 'admin' && hasPermission('manage_roles'))) {
+  if (role === 'Super_admin' || (role !== 'admin' && role !== 'Secrétaire Arrivée' && hasPermission('manage_roles'))) {
     navigation.splice(5, 0, { name: 'Rôles', href: '/roles', icon: Shield });
   }
 

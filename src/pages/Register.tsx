@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Building2, Lock, Mail, ArrowLeft, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { Building2, Lock, Mail, ArrowLeft, User, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export const Register = () => {
@@ -12,6 +12,20 @@ export const Register = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [inviteData, setInviteData] = useState<{ b: string, r: string } | null>(null);
+
+  useEffect(() => {
+    const invite = searchParams.get('invite');
+    if (invite) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(escape(atob(invite))));
+        setInviteData(decoded);
+      } catch (e) {
+        console.error('Invalid invitation link');
+      }
+    }
+  }, [searchParams]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,9 +33,9 @@ export const Register = () => {
     setError(null);
 
     try {
-      // Add a timeout to prevent infinite hanging
+      // Add a timeout
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Délai d'attente dépassé. Vérifiez votre connexion internet ou les paramètres de votre navigateur.")), 15000);
+        setTimeout(() => reject(new Error("Délai d'attente dépassé.")), 15000);
       });
 
       const signUpPromise = supabase.auth.signUp({
@@ -30,7 +44,10 @@ export const Register = () => {
         options: {
           data: {
             full_name: fullName,
-            bureau_name: bureauName,
+            bureau_id: inviteData?.b || undefined,
+            role: inviteData?.r || undefined,
+            bureau_name: inviteData ? undefined : bureauName,
+            status: inviteData ? 'approved' : 'pending' // Auto-approve invited users
           }
         }
       });
@@ -70,13 +87,21 @@ export const Register = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900 tracking-tight">Demande envoyée !</h2>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900 tracking-tight">
+            {inviteData ? 'Inscription terminée !' : 'Demande envoyée !'}
+          </h2>
           <div className="mt-4 space-y-4 text-gray-600">
             <p className="text-lg">
-              Votre demande de création pour le bureau <span className="font-bold text-blue-600">"{bureauName}"</span> a été enregistrée.
+              {inviteData 
+                ? "Votre compte a été créé avec succès. Vous pouvez maintenant accéder au système."
+                : <>Votre demande de création pour le bureau <span className="font-bold text-blue-600">"{bureauName}"</span> a été enregistrée.</>
+              }
             </p>
             <p className="text-sm bg-blue-50 p-4 rounded-lg border border-blue-100">
-              Un administrateur va examiner votre demande. Vous recevrez un accès dès que votre bureau sera validé.
+              {inviteData 
+                ? "Connectez-vous pour commencer à gérer vos dossiers d'arrivée."
+                : "Un administrateur va examiner votre demande. Vous recevrez un accès dès que votre bureau sera validé."
+              }
             </p>
           </div>
           <div className="mt-8">
@@ -128,10 +153,13 @@ export const Register = () => {
                 Retour
               </Link>
               <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-                Créer un bureau
+                {inviteData ? 'Rejoindre un bureau' : 'Créer un bureau'}
               </h2>
               <p className="mt-2 text-sm text-gray-500">
-                Remplissez les informations pour enregistrer votre organisation.
+                {inviteData 
+                  ? `Vous avez été invité à rejoindre un bureau en tant que ${inviteData.r}.`
+                  : 'Remplissez les informations pour enregistrer votre organisation.'
+                }
               </p>
             </div>
 
@@ -164,26 +192,28 @@ export const Register = () => {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label htmlFor="bureau-name" className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Nom du Bureau / Organisation
-                  </label>
-                  <div className="relative group">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                      <Building2 className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                {!inviteData && (
+                  <div className="space-y-1">
+                    <label htmlFor="bureau-name" className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Nom du Bureau / Organisation
+                    </label>
+                    <div className="relative group">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <Building2 className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      </div>
+                      <input
+                        id="bureau-name"
+                        name="bureauName"
+                        type="text"
+                        required
+                        className="block w-full rounded-xl border-gray-200 py-3 pl-10 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm border transition-all"
+                        placeholder="Ex: Direction Générale"
+                        value={bureauName}
+                        onChange={(e) => setBureauName(e.target.value)}
+                      />
                     </div>
-                    <input
-                      id="bureau-name"
-                      name="bureauName"
-                      type="text"
-                      required
-                      className="block w-full rounded-xl border-gray-200 py-3 pl-10 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm border transition-all"
-                      placeholder="Ex: Direction Générale"
-                      value={bureauName}
-                      onChange={(e) => setBureauName(e.target.value)}
-                    />
                   </div>
-                </div>
+                )}
 
                 <div className="space-y-1">
                   <label htmlFor="email-address" className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
