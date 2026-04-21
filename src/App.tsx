@@ -23,6 +23,8 @@ import { VaguemestrePortal } from './pages/VaguemestrePortal';
 import { Chat } from './pages/Chat';
 import { Statistics } from './pages/Statistics';
 
+import { AuditLogs } from './pages/AuditLogs';
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, isLoading, status, user } = useAuth();
 
@@ -88,6 +90,7 @@ export default function App() {
             <Route path="/dossiers/:id" element={<DossierDetails />} />
             <Route path="/dossiers/:id/edit" element={<EditDossier />} />
             <Route path="/statistics" element={<Statistics />} />
+            <Route path="/audit-logs" element={<AuditLogs />} />
             <Route path="/users" element={<UsersList />} />
             <Route path="/roles" element={<Roles />} />
             <Route path="/chat" element={<Chat />} />

@@ -82,7 +82,8 @@ CREATE TABLE IF NOT EXISTS public.comments (
 -- 7. Audit Logs Table
 CREATE TABLE IF NOT EXISTS public.audit_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    dossier_id UUID NOT NULL REFERENCES public.dossiers(id) ON DELETE CASCADE,
+    dossier_id UUID REFERENCES public.dossiers(id) ON DELETE CASCADE,
+    bureau_id UUID REFERENCES public.bureaus(id) ON DELETE CASCADE,
     user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     user_name TEXT,
     action TEXT NOT NULL,
@@ -109,11 +110,16 @@ BEGIN
     SELECT full_name INTO user_name FROM public.profiles WHERE id = auth.uid();
     
     IF (TG_OP = 'INSERT') THEN
-        INSERT INTO public.audit_logs (dossier_id, user_id, user_name, action, details)
-        VALUES (NEW.id, auth.uid(), COALESCE(user_name, 'Système'), 'Création', jsonb_build_object('tracking_code', NEW.tracking_code));
+        INSERT INTO public.audit_logs (dossier_id, bureau_id, user_id, user_name, action, details)
+        VALUES (NEW.id, NEW.bureau_id, auth.uid(), COALESCE(user_name, 'Système'), 'Création Dossier', jsonb_build_object('tracking_code', NEW.tracking_code));
     ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO public.audit_logs (dossier_id, user_id, user_name, action, details)
-        VALUES (NEW.id, auth.uid(), COALESCE(user_name, 'Système'), 'Modification', jsonb_build_object('old_status', OLD.statut, 'new_status', NEW.statut));
+        IF (NEW.statut != OLD.statut OR NEW.orientation != OLD.orientation) THEN
+            INSERT INTO public.audit_logs (dossier_id, bureau_id, user_id, user_name, action, details)
+            VALUES (NEW.id, NEW.bureau_id, auth.uid(), COALESCE(user_name, 'Système'), 'Modification Dossier', jsonb_build_object('old_status', OLD.statut, 'new_status', NEW.statut, 'tracking_code', NEW.tracking_code));
+        END IF;
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO public.audit_logs (dossier_id, bureau_id, user_id, user_name, action, details)
+        VALUES (OLD.id, OLD.bureau_id, auth.uid(), COALESCE(user_name, 'Système'), 'Suppression Dossier', jsonb_build_object('tracking_code', OLD.tracking_code));
     END IF;
     RETURN NEW;
 END;
@@ -130,7 +136,7 @@ CREATE INDEX IF NOT EXISTS idx_dossiers_bureau_id ON public.dossiers(bureau_id);
 CREATE INDEX IF NOT EXISTS idx_dossiers_tracking_code ON public.dossiers(tracking_code);
 CREATE INDEX IF NOT EXISTS idx_transmissions_dossier_id ON public.transmissions(dossier_id);
 CREATE INDEX IF NOT EXISTS idx_comments_dossier_id ON public.comments(dossier_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_dossier_id ON public.audit_logs(dossier_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_bureau_id ON public.audit_logs(bureau_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_bureau_id ON public.notifications(bureau_id);
 
 -- Enable Row Level Security
@@ -356,11 +362,15 @@ WITH CHECK (EXISTS (
 
 CREATE POLICY "Users view audit logs in same bureau" ON public.audit_logs FOR SELECT 
 TO authenticated
-USING (EXISTS (
-    SELECT 1 FROM public.dossiers 
-    WHERE id = dossier_id 
-    AND bureau_id = get_current_bureau_id()
-));
+USING (
+    bureau_id = get_current_bureau_id() 
+    OR 
+    EXISTS (
+        SELECT 1 FROM public.dossiers 
+        WHERE id = dossier_id 
+        AND bureau_id = get_current_bureau_id()
+    )
+);
 
 CREATE POLICY "Users view notifications" ON public.notifications FOR SELECT 
 TO authenticated

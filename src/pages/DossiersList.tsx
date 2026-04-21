@@ -124,7 +124,7 @@ export const DossiersList = () => {
             Gérez et suivez l'évolution de tous les dossiers de votre bureau.
           </p>
         </div>
-        {hasPermission('manage_dossiers') && (
+        {hasPermission('manage_dossiers') && role !== 'Secrétaire Départ' && (
           <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
             <Link
               to="/dossiers/new"

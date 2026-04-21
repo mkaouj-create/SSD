@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2, Plus, X, MessageSquare, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2, Plus, X, MessageSquare, BarChart2, Activity } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -172,17 +172,20 @@ export const Layout = () => {
     { name: 'Statistiques', href: '/statistics', icon: BarChart2 },
     { name: 'Équipe', href: '/chat', icon: MessageSquare },
     { name: 'Utilisateurs', href: '/users', icon: Users },
+    { name: 'Journal d\'Audit', href: '/audit-logs', icon: Activity },
     { name: 'Paramètres', href: '/settings', icon: Settings },
   ].filter(item => {
     // Masquer "Équipe" pour les admins et secrétaire arrivée/départ sur demande utilisateur
     if ((role === 'admin' || role === 'Secrétaire Arrivée' || role === 'Secrétaire Départ') && item.name === 'Équipe') return false;
-    // Secrétaire arrivée/départ ne voit pas les utilisateurs, statistiques et paramètres
-    if ((role === 'Secrétaire Arrivée' || role === 'Secrétaire Départ') && (item.name === 'Utilisateurs' || item.name === 'Statistiques' || item.name === 'Paramètres')) return false;
+    // Secrétaire arrivée/départ ne voit pas les utilisateurs, statistiques, journal d'audit et paramètres
+    if ((role === 'Secrétaire Arrivée' || role === 'Secrétaire Départ') && (item.name === 'Utilisateurs' || item.name === 'Statistiques' || item.name === 'Paramètres' || item.name === 'Journal d\'Audit')) return false;
+    // Seulement l'admin et Super_admin peuvent voir le Journal d'Audit
+    if (item.name === 'Journal d\'Audit' && role !== 'admin' && role !== 'Super_admin') return false;
     return true;
   });
 
   if (role === 'Super_admin' || (role !== 'admin' && role !== 'Secrétaire Arrivée' && role !== 'Secrétaire Départ' && hasPermission('manage_roles'))) {
-    navigation.splice(5, 0, { name: 'Rôles', href: '/roles', icon: Shield });
+    navigation.splice(navigation.findIndex(n => n.name === 'Journal d\'Audit') || 5, 0, { name: 'Rôles', href: '/roles', icon: Shield });
   }
 
   if (role === 'Super_admin') {
