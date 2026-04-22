@@ -36,6 +36,21 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
 
+  if (user && user.is_active === false) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-gray-50 p-4 text-center">
+        <h2 className="text-2xl font-bold text-red-600">Compte désactivé</h2>
+        <p className="mt-2 text-gray-600">Votre compte a été temporairement désactivé par l'administrateur de votre bureau.</p>
+        <button 
+          onClick={() => window.location.href = '/'}
+          className="mt-4 text-blue-600 hover:underline"
+        >
+          Retour à l'accueil
+        </button>
+      </div>
+    );
+  }
+
   // If user profile is missing or status is pending, show pending page
   if (!user || status === 'pending') {
     return <PendingApproval />;

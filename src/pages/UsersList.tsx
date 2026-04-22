@@ -229,6 +229,23 @@ export const UsersList = () => {
     return roleColors[roleName] || 'bg-indigo-100 text-indigo-800';
   };
 
+  const toggleUserStatus = async (userId: string, currentStatus: boolean | undefined) => {
+    try {
+      const newStatus = currentStatus === false ? true : false;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: newStatus })
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      setUsers(users.map(u => u.id === userId ? { ...u, is_active: newStatus } : u));
+    } catch (err: any) {
+      console.error('Error toggling user status:', err);
+      alert('Erreur lors du changement de statut.');
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="sm:flex sm:items-center justify-between mb-8">
@@ -540,6 +557,7 @@ export const UsersList = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Utilisateur</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Statut</th>
                 <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Rôle & Permissions</th>
                 <th className="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
               </tr>
@@ -579,6 +597,15 @@ export const UsersList = () => {
                       </div>
                     </td>
                     <td className="px-8 py-5 whitespace-nowrap">
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${
+                        u.is_active !== false 
+                          ? 'bg-green-100 text-green-800 border-green-200' 
+                          : 'bg-red-100 text-red-800 border-red-200'
+                      }`}>
+                        {u.is_active !== false ? 'Actif' : 'Désactivé'}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5 whitespace-nowrap">
                       <span className={`inline-flex items-center rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
                         {(u.role === 'admin' || u.role === 'Super_admin') && <Shield className="mr-1.5 h-3 w-3" />}
                         {u.role}
@@ -587,6 +614,17 @@ export const UsersList = () => {
                     <td className="px-8 py-5 whitespace-nowrap text-right">
                       {hasPermission('manage_users') && u.id !== currentUser?.id && (
                         <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => toggleUserStatus(u.id, u.is_active)}
+                            className={`p-2.5 rounded-xl transition-all ${
+                              u.is_active !== false 
+                                ? 'text-red-400 hover:bg-red-50 hover:text-red-600' 
+                                : 'text-green-500 hover:bg-green-50 hover:text-green-600'
+                            }`}
+                            title={u.is_active !== false ? "Désactiver l'utilisateur" : "Activer l'utilisateur"}
+                          >
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                          </button>
                           <button
                             onClick={() => {
                               setEditingUser(u);
@@ -642,12 +680,31 @@ export const UsersList = () => {
                     <div className="text-[10px] text-gray-400 truncate">{u.email}</div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3 ml-4">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
-                    {u.role}
-                  </span>
+                <div className="flex flex-col items-end space-y-2 ml-4">
+                  <div className="flex items-center space-x-2">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border ${
+                      u.is_active !== false 
+                        ? 'bg-green-100 text-green-800 border-green-200' 
+                        : 'bg-red-100 text-red-800 border-red-200'
+                    }`}>
+                      {u.is_active !== false ? 'Actif' : 'Désactivé'}
+                    </span>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
+                      {u.role}
+                    </span>
+                  </div>
                   {hasPermission('manage_users') && u.id !== currentUser?.id && (
                     <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => toggleUserStatus(u.id, u.is_active)}
+                        className={`p-1.5 rounded-lg ${
+                          u.is_active !== false 
+                            ? 'text-red-400 hover:bg-red-50' 
+                            : 'text-green-500 hover:bg-green-50'
+                        }`}
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                      </button>
                       <button
                         onClick={() => {
                           setEditingUser(u);

@@ -83,6 +83,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const normalizedRole = data.role?.toLowerCase() === 'super_admin' ? 'Super_admin' : data.role;
         const profileWithNormalizedRole = { ...data, role: normalizedRole };
         
+        if (data.is_active === false) {
+           setUserProfile(profileWithNormalizedRole);
+           setPermissions([]);
+           await supabase.auth.signOut();
+           return;
+        }
+
         setUserProfile(profileWithNormalizedRole);
         await updatePermissions(normalizedRole, data.bureau_id);
       } else {

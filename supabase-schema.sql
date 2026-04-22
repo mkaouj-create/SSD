@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     email TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'client',
     status TEXT NOT NULL DEFAULT 'pending', -- pending, approved, rejected
+    is_active BOOLEAN DEFAULT true,
     requested_bureau_name TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -264,7 +265,8 @@ WITH CHECK (
         OR (
             role = (SELECT role FROM public.profiles WHERE id = auth.uid()) AND
             bureau_id = (SELECT bureau_id FROM public.profiles WHERE id = auth.uid()) AND
-            status = (SELECT status FROM public.profiles WHERE id = auth.uid())
+            status = (SELECT status FROM public.profiles WHERE id = auth.uid()) AND
+            is_active = (SELECT is_active FROM public.profiles WHERE id = auth.uid())
         )
     )
 );
