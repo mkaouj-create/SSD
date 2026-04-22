@@ -306,7 +306,7 @@ export const Layout = () => {
               <input
                 type="text"
                 autoFocus
-                placeholder="Rechercher un dossier..."
+                placeholder="Rechercher (N° enreg, N° Service, Expéditeur)..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -488,7 +488,7 @@ export const Layout = () => {
                 <Search className="absolute left-3 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Rechercher (numéro, service, expéditeur)..."
+                  placeholder="Rechercher (N° enreg, N° Service, Expéditeur)..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);

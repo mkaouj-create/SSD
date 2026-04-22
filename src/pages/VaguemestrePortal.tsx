@@ -55,7 +55,7 @@ export const VaguemestrePortal = () => {
         }
 
         if (searchQuery.trim()) {
-           query = query.or(`numero_enregistrement.ilike.%${searchQuery}%,objet.ilike.%${searchQuery}%,expediteur.ilike.%${searchQuery}%,tracking_code.ilike.%${searchQuery}%`);
+           query = query.or(`numero_enregistrement.ilike.%${searchQuery}%,numero_expediteur.ilike.%${searchQuery}%,objet.ilike.%${searchQuery}%,expediteur.ilike.%${searchQuery}%,tracking_code.ilike.%${searchQuery}%`);
         }
 
         if (filterStatus) {
@@ -140,7 +140,7 @@ export const VaguemestrePortal = () => {
               type="text"
               autoFocus
               className="w-full py-4 pr-3 text-lg text-gray-900 bg-transparent border-none focus:ring-0 outline-none placeholder-gray-400 font-medium"
-              placeholder="Numéro, objet, code SSD..."
+              placeholder="Numéro enreg, N° Service, Objet, Code SSD..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
