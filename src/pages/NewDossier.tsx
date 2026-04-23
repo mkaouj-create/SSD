@@ -28,6 +28,22 @@ export const NewDossier = () => {
     setLoading(true);
 
     try {
+      if (formData.numero_enregistrement && formData.date_arrivee) {
+        const { data: duplicates, error: dupError } = await supabase
+          .from('dossiers')
+          .select('id')
+          .eq('bureau_id', bureauId)
+          .eq('date_arrivee', formData.date_arrivee)
+          .eq('numero_enregistrement', formData.numero_enregistrement.trim())
+          .limit(1);
+          
+        if (dupError) throw dupError;
+        
+        if (duplicates && duplicates.length > 0) {
+           throw new Error(`Un dossier avec le N° Enregistrement "${formData.numero_enregistrement}" existe déjà pour la date du ${formData.date_arrivee}.`);
+        }
+      }
+
       // Auto-generate tracking code: SSD-YYYY-XXXX
       const year = new Date().getFullYear();
       const randomNum = Math.floor(1000 + Math.random() * 9000);

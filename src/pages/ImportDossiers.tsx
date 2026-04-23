@@ -139,6 +139,37 @@ export const ImportDossiers = () => {
     setErrors([]);
 
     try {
+      // 1. Duplicate check for batch
+      const rowsWithEnreg = parsedData.filter(r => r.numero_enregistrement && r.numero_enregistrement.trim() !== '');
+      if (rowsWithEnreg.length > 0) {
+        // Chunk conditions to prevent excessively long URLs in initial fetch if thousands of rows
+        const CHUNK_SIZE = 50;
+        let allDuplicates: any[] = [];
+        
+        for (let i = 0; i < rowsWithEnreg.length; i += CHUNK_SIZE) {
+           const chunk = rowsWithEnreg.slice(i, i + CHUNK_SIZE);
+           const orConditions = chunk
+             .map(r => `and(numero_enregistrement.eq."${r.numero_enregistrement.trim()}",date_arrivee.eq."${r.date_arrivee}")`)
+             .join(',');
+             
+           const { data: duplicates, error: selectError } = await supabase
+             .from('dossiers')
+             .select('numero_enregistrement, date_arrivee')
+             .eq('bureau_id', bureauId)
+             .or(orConditions);
+             
+           if (selectError) throw selectError;
+           if (duplicates) {
+             allDuplicates = [...allDuplicates, ...duplicates];
+           }
+        }
+
+        if (allDuplicates.length > 0) {
+           const dupNames = allDuplicates.map(d => `${d.numero_enregistrement} (${d.date_arrivee})`).join(', ');
+           throw new Error(`Dossiers existants détectés : ${dupNames}. Vous essayez d'importer des Numéros d'Enregistrements qui existent déjà à la même Date.`);
+        }
+      }
+
       // Process in batches
       const dossiersToInsert = parsedData.map(d => {
          const year = new Date().getFullYear();

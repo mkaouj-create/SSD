@@ -161,7 +161,39 @@ export const TableauDossier = () => {
         throw new Error("La 'Date d'arrivée' est obligatoire pour chaque dossier rempli.");
       }
 
-      // 3. Prepare data for Supabase
+      // 3. Duplicate check for valid rows with a numero_enregistrement
+      const rowsWithEnreg = validRows.filter(r => r.numero_enregistrement.trim() !== '');
+      if (rowsWithEnreg.length > 0) {
+        // Find existing within the table itself to prevent duplicates within the entry form
+        const seen = new Set();
+        for (const r of rowsWithEnreg) {
+          const key = `${r.numero_enregistrement}-${r.date_arrivee}`;
+          if (seen.has(key)) {
+             throw new Error(`Doublons détectés dans le tableau pour le N° Enregistrement "${r.numero_enregistrement}" le ${r.date_arrivee}.`);
+          }
+          seen.add(key);
+        }
+
+        // Find existing in database
+        const orConditions = rowsWithEnreg
+          .map(r => `and(numero_enregistrement.eq."${r.numero_enregistrement.trim()}",date_arrivee.eq."${r.date_arrivee}")`)
+          .join(',');
+          
+        const { data: duplicates, error: selectError } = await supabase
+          .from('dossiers')
+          .select('numero_enregistrement, date_arrivee')
+          .eq('bureau_id', bureauId)
+          .or(orConditions);
+
+        if (selectError) throw selectError;
+
+        if (duplicates && duplicates.length > 0) {
+           const dupNames = duplicates.map(d => `${d.numero_enregistrement} (${d.date_arrivee})`).join(', ');
+           throw new Error(`Dossiers existants détectés : ${dupNames}. Un dossier avec le même Numéro d'Enregistrement à la même Date existe déjà.`);
+        }
+      }
+
+      // 4. Prepare data for Supabase
       const dossiersToInsert = validRows.map(row => {
         const year = new Date().getFullYear();
         const randomNum = Math.floor(1000 + Math.random() * 9000);
