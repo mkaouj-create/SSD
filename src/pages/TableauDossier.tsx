@@ -54,6 +54,77 @@ export const TableauDossier = () => {
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent, startRowIndex: number, startColIndex: number) => {
+    const pasteData = e.clipboardData.getData('text');
+    if (!pasteData) return;
+
+    const pastedRows = pasteData.split(/\r?\n/).map(r => r.split('\t'));
+    
+    // If it's a single cell paste without tabs or newlines, let default input behavior run
+    if (pastedRows.length === 1 && pastedRows[0].length === 1) return;
+
+    e.preventDefault();
+
+    const COLUMN_KEYS: (keyof DraftRow)[] = [
+      'type_dossier',
+      'date_arrivee',
+      'numero_enregistrement',
+      'numero_expediteur',
+      'objet',
+      'expediteur',
+      'orientation',
+      'numero_orientation'
+    ];
+
+    setRows(prevRows => {
+      const newRows = [...prevRows];
+
+      pastedRows.forEach((rowData, i) => {
+        // Skip empty lines at the end of copy
+        if (rowData.length === 1 && rowData[0] === '') return;
+
+        const targetRowIndex = startRowIndex + i;
+        
+        while (targetRowIndex >= newRows.length) {
+          newRows.push(createEmptyRow());
+        }
+
+        const rowToUpdate = { ...newRows[targetRowIndex] };
+
+        rowData.forEach((cellData, j) => {
+          const targetColIndex = startColIndex + j;
+          if (targetColIndex < COLUMN_KEYS.length) {
+            const field = COLUMN_KEYS[targetColIndex];
+            let val = cellData.trim();
+            
+            if (field === 'date_arrivee') {
+              const parts = val.split('/');
+              if (parts.length === 3) {
+                // Formatting DD/MM/YYYY to YYYY-MM-DD
+                val = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+              }
+            }
+
+            if (field === 'type_dossier' && val !== 'Arrivée' && val !== 'Départ') {
+               // Ignore invalid types, keep default 'Arrivée' or previous value
+            } else {
+               (rowToUpdate as any)[field] = val;
+            }
+
+            // Auto-switch to Départ if numero_orientation is provided
+            if (field === 'numero_orientation' && val && rowToUpdate.type_dossier === 'Arrivée') {
+              rowToUpdate.type_dossier = 'Départ';
+            }
+          }
+        });
+
+        newRows[targetRowIndex] = rowToUpdate;
+      });
+
+      return newRows;
+    });
+  };
+
   const handleRowChange = (tempId: string, field: keyof DraftRow, value: string) => {
     setRows(rows.map(row => {
       if (row.tempId === tempId) {
@@ -140,14 +211,20 @@ export const TableauDossier = () => {
 
   return (
     <div className="max-w-[100%] mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
-          <TableIcon className="h-8 w-8 mr-3 text-blue-600" />
-          Saisie en Masse (Tableau)
-        </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Saisissez rapidement plusieurs dossiers à la volée. Laissez vides les lignes inutilisées.
-        </p>
+      <div className="mb-6 flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
+            <TableIcon className="h-8 w-8 mr-3 text-blue-600" />
+            Saisie en Masse (Tableau)
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Saisissez rapidement plusieurs dossiers à la volée. Laissez vides les lignes inutilisées.
+          </p>
+        </div>
+        <div className="hidden md:block bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-xs font-bold border border-blue-100 flex items-center gap-2">
+          <span className="flex h-5 w-5 bg-blue-200 text-blue-800 rounded-md items-center justify-center">💡</span>
+          Vous pouvez copier-coller des cellules directement depuis Excel dans n'importe quelle case.
+        </div>
       </div>
 
       {success && (
@@ -191,6 +268,7 @@ export const TableauDossier = () => {
                     <select
                       value={row.type_dossier}
                       onChange={(e) => handleRowChange(row.tempId, 'type_dossier', e.target.value)}
+                      onPaste={(e) => handlePaste(e, index, 0)}
                       className="w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-blue-500 focus:bg-white rounded-lg px-2 py-1.5 text-xs font-bold text-gray-700 outline-none transition-all"
                     >
                       <option value="Arrivée">Arrivée</option>
@@ -202,6 +280,7 @@ export const TableauDossier = () => {
                       type="date"
                       value={row.date_arrivee}
                       onChange={(e) => handleRowChange(row.tempId, 'date_arrivee', e.target.value)}
+                      onPaste={(e) => handlePaste(e, index, 1)}
                       className="w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-blue-500 focus:bg-white rounded-lg px-2 py-1.5 text-xs font-medium text-gray-900 outline-none transition-all"
                     />
                   </td>
@@ -211,6 +290,7 @@ export const TableauDossier = () => {
                       placeholder="Ex: 125/2026"
                       value={row.numero_enregistrement}
                       onChange={(e) => handleRowChange(row.tempId, 'numero_enregistrement', e.target.value)}
+                      onPaste={(e) => handlePaste(e, index, 2)}
                       className="w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-blue-500 focus:bg-white rounded-lg px-2 py-1.5 text-xs font-bold text-gray-900 outline-none transition-all placeholder-gray-300 uppercase"
                     />
                   </td>
@@ -220,6 +300,7 @@ export const TableauDossier = () => {
                       placeholder="Ex: SSD/DL"
                       value={row.numero_expediteur}
                       onChange={(e) => handleRowChange(row.tempId, 'numero_expediteur', e.target.value)}
+                      onPaste={(e) => handlePaste(e, index, 3)}
                       className="w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-blue-500 focus:bg-white rounded-lg px-2 py-1.5 text-xs font-bold text-blue-700 outline-none transition-all placeholder-gray-300 uppercase"
                     />
                   </td>
@@ -229,6 +310,7 @@ export const TableauDossier = () => {
                       placeholder="Saisissez l'objet du dossier..."
                       value={row.objet}
                       onChange={(e) => handleRowChange(row.tempId, 'objet', e.target.value)}
+                      onPaste={(e) => handlePaste(e, index, 4)}
                       className="w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-blue-500 focus:bg-white rounded-lg px-2 py-1.5 text-xs font-medium text-gray-900 outline-none transition-all placeholder-gray-300"
                     />
                   </td>
@@ -237,6 +319,7 @@ export const TableauDossier = () => {
                       type="text"
                       value={row.expediteur}
                       onChange={(e) => handleRowChange(row.tempId, 'expediteur', e.target.value)}
+                      onPaste={(e) => handlePaste(e, index, 5)}
                       className="w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-blue-500 focus:bg-white rounded-lg px-2 py-1.5 text-xs font-medium text-gray-700 outline-none transition-all"
                     />
                   </td>
@@ -245,6 +328,7 @@ export const TableauDossier = () => {
                       type="text"
                       value={row.orientation}
                       onChange={(e) => handleRowChange(row.tempId, 'orientation', e.target.value)}
+                      onPaste={(e) => handlePaste(e, index, 6)}
                       className="w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-blue-500 focus:bg-white rounded-lg px-2 py-1.5 text-xs font-medium text-gray-700 outline-none transition-all uppercase"
                     />
                   </td>
@@ -253,6 +337,7 @@ export const TableauDossier = () => {
                       type="text"
                       value={row.numero_orientation}
                       onChange={(e) => handleRowChange(row.tempId, 'numero_orientation', e.target.value)}
+                      onPaste={(e) => handlePaste(e, index, 7)}
                       className="w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-blue-500 focus:bg-white rounded-lg px-2 py-1.5 text-xs font-bold text-gray-900 outline-none transition-all"
                     />
                   </td>
