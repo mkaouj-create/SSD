@@ -8,25 +8,25 @@ export const VaguemestrePortal = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   const isDirecteur = role === 'Directeur';
+  const currentYear = new Date().getFullYear();
   const targetService = isDirecteur ? '' : (user?.user_metadata?.service || '');
   
   // Filter states
   const [showFilters, setShowFilters] = useState(false);
-  const [filterYear, setFilterYear] = useState('');
+  const [filterYear, setFilterYear] = useState(currentYear.toString());
   const [filterDate, setFilterDate] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
 
   // Selected dossier for details modal
   const [selectedDossier, setSelectedDossier] = useState<any>(null);
 
   const resetFilters = () => {
-    setFilterYear('');
+    setFilterYear(currentYear.toString());
     setFilterDate('');
     setFilterStatus('');
   };
@@ -147,19 +147,37 @@ export const VaguemestrePortal = () => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="px-3 py-4 text-gray-400 hover:text-gray-600 transition-colors"
+                className="px-3 py-4 text-gray-400 hover:text-gray-600 transition-colors bg-white z-10"
               >
                 <X className="h-5 w-5" />
               </button>
             )}
+            
             <div className="h-8 w-px bg-gray-200 mx-1"></div>
+            
+            <select
+              value={filterYear}
+              onChange={(e) => {
+                setFilterYear(e.target.value);
+                if (e.target.value) setFilterDate('');
+              }}
+              className="hidden md:block py-4 pr-8 pl-4 bg-transparent border-none focus:ring-0 text-gray-700 font-bold outline-none cursor-pointer hover:bg-gray-50 transition-colors"
+            >
+              <option value="">Toutes années</option>
+              {years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+
+            <div className="hidden md:block h-8 w-px bg-gray-200 mx-1"></div>
+
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center space-x-2 px-6 py-4 font-bold transition-colors ${showFilters || filterYear || filterDate || filterStatus ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+              className={`flex items-center space-x-2 px-6 py-4 font-bold transition-colors ${showFilters || filterDate || filterStatus ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
             >
               <Filter className="h-5 w-5" />
               <span className="hidden sm:inline">Filtres</span>
-              {(filterYear || filterDate || filterStatus) && (
+              {(filterDate || filterStatus) && (
                 <span className="flex h-2.5 w-2.5 rounded-full bg-blue-600 ml-1"></span>
               )}
             </button>
@@ -168,10 +186,10 @@ export const VaguemestrePortal = () => {
           {/* Expanded Filters Panel */}
           {showFilters && (
             <div className="absolute top-full left-0 right-0 mt-3 bg-white rounded-2xl shadow-xl border border-gray-100 p-6 z-10 animate-in slide-in-from-top-2 fade-in duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                {/* Year Select */}
-                <div>
+                {/* Mobile Year Select (visible only on small screens inside filters) */}
+                <div className="md:hidden">
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center">
                     <CalendarDays className="h-3 w-3 mr-1" /> Année
                   </label>
@@ -229,7 +247,7 @@ export const VaguemestrePortal = () => {
 
               </div>
 
-              {(filterYear || filterDate || filterStatus) && (
+              {(filterDate || filterStatus) && (
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={resetFilters}
