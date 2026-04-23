@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2, Plus, X, MessageSquare, BarChart2, Activity } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, LogOut, Menu, Users, Settings, Bell, Search, Shield, Building2, Plus, X, MessageSquare, BarChart2, Activity, LayoutList } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -169,12 +169,15 @@ export const Layout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Dossiers', href: '/dossiers', icon: FolderOpen },
+    { name: 'Saisie (Tableau)', href: '/tableau-dossier', icon: LayoutList },
     { name: 'Statistiques', href: '/statistics', icon: BarChart2 },
     { name: 'Équipe', href: '/chat', icon: MessageSquare },
     { name: 'Utilisateurs', href: '/users', icon: Users },
     { name: 'Journal d\'Audit', href: '/audit-logs', icon: Activity },
     { name: 'Paramètres', href: '/settings', icon: Settings },
   ].filter(item => {
+    // Masquer Tableau dossier pour les rôles qui ne gèrent pas les dossiers (si role client)
+    if (item.name === 'Saisie (Tableau)' && !hasPermission('manage_dossiers')) return false;
     // Masquer "Équipe" pour les admins et secrétaire arrivée/départ sur demande utilisateur
     if ((role === 'admin' || role === 'Secrétaire Arrivée' || role === 'Secrétaire Départ') && item.name === 'Équipe') return false;
     // Secrétaire arrivée/départ ne voit pas les utilisateurs, statistiques, journal d'audit et paramètres
