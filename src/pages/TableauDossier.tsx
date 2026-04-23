@@ -14,6 +14,7 @@ interface DraftRow {
   objet: string;
   orientation: string;
   numero_orientation: string;
+  annotation: string;
 }
 
 export const TableauDossier = () => {
@@ -32,7 +33,8 @@ export const TableauDossier = () => {
     expediteur: '',
     objet: '',
     orientation: '',
-    numero_orientation: ''
+    numero_orientation: '',
+    annotation: ''
   });
 
   const [rows, setRows] = useState<DraftRow[]>([
@@ -73,7 +75,8 @@ export const TableauDossier = () => {
       'objet',
       'expediteur',
       'orientation',
-      'numero_orientation'
+      'numero_orientation',
+      'annotation'
     ];
 
     setRows(prevRows => {
@@ -178,6 +181,7 @@ export const TableauDossier = () => {
           objet: row.objet,
           orientation: row.orientation,
           numero_orientation: row.numero_orientation,
+          annotation: row.annotation,
         };
       });
 
@@ -255,6 +259,7 @@ export const TableauDossier = () => {
                 <th className="px-4 py-3 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest min-w-[150px]">Expéditeur</th>
                 <th className="px-4 py-3 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest min-w-[150px]">Orientation</th>
                 <th className="px-4 py-3 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest min-w-[140px]">N° Orientation</th>
+                <th className="px-4 py-3 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest min-w-[200px]">Annotation</th>
                 <th className="px-2 py-3 w-10"></th>
               </tr>
             </thead>
@@ -339,6 +344,16 @@ export const TableauDossier = () => {
                       onChange={(e) => handleRowChange(row.tempId, 'numero_orientation', e.target.value)}
                       onPaste={(e) => handlePaste(e, index, 7)}
                       className="w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-blue-500 focus:bg-white rounded-lg px-2 py-1.5 text-xs font-bold text-gray-900 outline-none transition-all"
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input
+                      type="text"
+                      placeholder="Note/Annotation..."
+                      value={row.annotation}
+                      onChange={(e) => handleRowChange(row.tempId, 'annotation', e.target.value)}
+                      onPaste={(e) => handlePaste(e, index, 8)}
+                      className="w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-blue-500 focus:bg-white rounded-lg px-2 py-1.5 text-xs font-medium text-gray-700 outline-none transition-all"
                     />
                   </td>
                   <td className="px-2 py-2 text-center">
