@@ -22,6 +22,7 @@ import { SharedLogin } from './pages/SharedLogin';
 import { VaguemestrePortal } from './pages/VaguemestrePortal';
 import { Chat } from './pages/Chat';
 import { Statistics } from './pages/Statistics';
+import { ImportDossiers } from './pages/ImportDossiers';
 
 import { AuditLogs } from './pages/AuditLogs';
 
@@ -102,6 +103,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dossiers" element={<DossiersList />} />
             <Route path="/dossiers/new" element={<NewDossier />} />
+            <Route path="/dossiers/import" element={<ImportDossiers />} />
             <Route path="/dossiers/:id" element={<DossierDetails />} />
             <Route path="/dossiers/:id/edit" element={<EditDossier />} />
             <Route path="/statistics" element={<Statistics />} />
