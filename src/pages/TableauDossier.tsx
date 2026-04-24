@@ -167,16 +167,20 @@ export const TableauDossier = () => {
         // Find existing within the table itself to prevent duplicates within the entry form
         const seen = new Set();
         for (const r of rowsWithEnreg) {
-          const key = `${r.numero_enregistrement}-${r.date_arrivee}`;
+          const year = r.date_arrivee.substring(0, 4);
+          const key = `${r.numero_enregistrement.trim()}-${year}`;
           if (seen.has(key)) {
-             throw new Error(`Doublons détectés dans le tableau pour le N° Enregistrement "${r.numero_enregistrement}" le ${r.date_arrivee}.`);
+             throw new Error(`Doublons détectés dans le tableau pour le N° Enregistrement "${r.numero_enregistrement}" en ${year}.`);
           }
           seen.add(key);
         }
 
         // Find existing in database
         const orConditions = rowsWithEnreg
-          .map(r => `and(numero_enregistrement.eq."${r.numero_enregistrement.trim()}",date_arrivee.eq."${r.date_arrivee}")`)
+          .map(r => {
+             const year = r.date_arrivee.substring(0, 4);
+             return `and(numero_enregistrement.eq."${r.numero_enregistrement.trim()}",date_arrivee.gte."${year}-01-01",date_arrivee.lte."${year}-12-31")`;
+          })
           .join(',');
           
         const { data: duplicates, error: selectError } = await supabase
@@ -188,8 +192,8 @@ export const TableauDossier = () => {
         if (selectError) throw selectError;
 
         if (duplicates && duplicates.length > 0) {
-           const dupNames = duplicates.map(d => `${d.numero_enregistrement} (${d.date_arrivee})`).join(', ');
-           throw new Error(`Dossiers existants détectés : ${dupNames}. Un dossier avec le même Numéro d'Enregistrement à la même Date existe déjà.`);
+           const dupNames = duplicates.map(d => `${d.numero_enregistrement} (${d.date_arrivee.substring(0, 4)})`).join(', ');
+           throw new Error(`Dossiers existants détectés : ${dupNames}. Un dossier avec ce Numéro d'Enregistrement existe déjà pour cette année.`);
         }
       }
 

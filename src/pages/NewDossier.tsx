@@ -29,18 +29,20 @@ export const NewDossier = () => {
 
     try {
       if (formData.numero_enregistrement && formData.date_arrivee) {
+        const year = formData.date_arrivee.substring(0, 4);
         const { data: duplicates, error: dupError } = await supabase
           .from('dossiers')
           .select('id')
           .eq('bureau_id', bureauId)
-          .eq('date_arrivee', formData.date_arrivee)
           .eq('numero_enregistrement', formData.numero_enregistrement.trim())
+          .gte('date_arrivee', `${year}-01-01`)
+          .lte('date_arrivee', `${year}-12-31`)
           .limit(1);
           
         if (dupError) throw dupError;
         
         if (duplicates && duplicates.length > 0) {
-           throw new Error(`Un dossier avec le N° Enregistrement "${formData.numero_enregistrement}" existe déjà pour la date du ${formData.date_arrivee}.`);
+           throw new Error(`Un dossier avec le N° Enregistrement "${formData.numero_enregistrement}" existe déjà pour l'année ${year}.`);
         }
       }
 

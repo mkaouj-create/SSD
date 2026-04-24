@@ -142,6 +142,17 @@ export const ImportDossiers = () => {
       // 1. Duplicate check for batch
       const rowsWithEnreg = parsedData.filter(r => r.numero_enregistrement && r.numero_enregistrement.trim() !== '');
       if (rowsWithEnreg.length > 0) {
+        // Internal check to prevent duplicate within the same file
+        const seen = new Set();
+        for (const r of rowsWithEnreg) {
+          const year = String(r.date_arrivee).substring(0, 4);
+          const key = `${String(r.numero_enregistrement).trim()}-${year}`;
+          if (seen.has(key)) {
+             throw new Error(`Doublons détectés dans le fichier importé pour le N° Enregistrement "${r.numero_enregistrement}" en ${year}.`);
+          }
+          seen.add(key);
+        }
+
         // Chunk conditions to prevent excessively long URLs in initial fetch if thousands of rows
         const CHUNK_SIZE = 50;
         let allDuplicates: any[] = [];
@@ -149,7 +160,10 @@ export const ImportDossiers = () => {
         for (let i = 0; i < rowsWithEnreg.length; i += CHUNK_SIZE) {
            const chunk = rowsWithEnreg.slice(i, i + CHUNK_SIZE);
            const orConditions = chunk
-             .map(r => `and(numero_enregistrement.eq."${r.numero_enregistrement.trim()}",date_arrivee.eq."${r.date_arrivee}")`)
+             .map(r => {
+                const year = String(r.date_arrivee).substring(0, 4);
+                return `and(numero_enregistrement.eq."${String(r.numero_enregistrement).trim()}",date_arrivee.gte."${year}-01-01",date_arrivee.lte."${year}-12-31")`;
+             })
              .join(',');
              
            const { data: duplicates, error: selectError } = await supabase
@@ -165,8 +179,8 @@ export const ImportDossiers = () => {
         }
 
         if (allDuplicates.length > 0) {
-           const dupNames = allDuplicates.map(d => `${d.numero_enregistrement} (${d.date_arrivee})`).join(', ');
-           throw new Error(`Dossiers existants détectés : ${dupNames}. Vous essayez d'importer des Numéros d'Enregistrements qui existent déjà à la même Date.`);
+           const dupNames = allDuplicates.map(d => `${d.numero_enregistrement} (${String(d.date_arrivee).substring(0,4)})`).join(', ');
+           throw new Error(`Dossiers existants détectés : ${dupNames}. Vous essayez d'importer des Numéros d'Enregistrements qui existent déjà pour la même année.`);
         }
       }
 
