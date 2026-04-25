@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Calendar, Building, Activity, Download, Filter, X } from 'lucide-react';
+import { Calendar, Building, Activity, Download, Filter, X, FolderOpen } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { extractServices } from '../lib/orientationUtils';
@@ -372,6 +372,73 @@ export const Statistics = () => {
                     </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Liste Complète des Dossiers */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 lg:col-span-2 flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-green-50 text-green-600">
+                <FolderOpen className="h-5 w-5" />
+              </div>
+              <h3 className="text-lg font-black text-gray-900 tracking-tight">Liste des Dossiers Enregistrés</h3>
+            </div>
+            <span className="text-xs font-bold px-3 py-1 bg-gray-100 text-gray-600 rounded-full">
+              {filteredDossiers.length} dossiers trouvés
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left border-separate border-spacing-y-2">
+              <thead className="text-xs text-gray-500 uppercase">
+                <tr>
+                  <th className="px-4 py-3 font-black">Code Tracking</th>
+                  <th className="px-4 py-3 font-black">Date Arrivée</th>
+                  <th className="px-4 py-3 font-black">Expéditeur</th>
+                  <th className="px-4 py-3 font-black">Objet</th>
+                  <th className="px-4 py-3 font-black">Orientation</th>
+                  <th className="px-4 py-3 font-black">Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDossiers.map((d) => (
+                  <tr key={d.id} className="bg-white hover:bg-blue-50/50 transition-all group">
+                    <td className="px-4 py-4 font-bold text-blue-600 border-y border-l border-gray-50 rounded-l-2xl">
+                      {d.tracking_code}
+                    </td>
+                    <td className="px-4 py-4 text-gray-500 font-medium border-y border-gray-50">
+                      {d.date_arrivee ? format(parseISO(d.date_arrivee), 'dd/MM/yyyy') : '-'}
+                    </td>
+                    <td className="px-4 py-4 text-gray-900 font-bold border-y border-gray-50">
+                      {d.expediteur || '-'}
+                    </td>
+                    <td className="px-4 py-4 text-gray-600 font-medium border-y border-gray-50 max-w-xs truncate">
+                      {d.objet}
+                    </td>
+                    <td className="px-4 py-4 text-purple-600 font-bold border-y border-gray-50">
+                      {extractServices(d.orientation).join(', ') || '-'}
+                    </td>
+                    <td className="px-4 py-4 border-y border-r border-gray-50 rounded-r-2xl">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        d.statut === 'Terminé' ? 'bg-green-100 text-green-700' :
+                        d.statut === 'Transmis' ? 'bg-blue-100 text-blue-700' :
+                        d.statut === 'En cours' ? 'bg-orange-100 text-orange-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {d.statut || 'Reçu'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {filteredDossiers.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center text-gray-400 font-medium">
+                      Aucun dossier ne correspond aux filtres actuels.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
