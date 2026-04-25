@@ -8,6 +8,7 @@ export const Register = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [bureauName, setBureauName] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -45,7 +46,9 @@ export const Register = () => {
           data: {
             full_name: fullName,
             bureau_id: inviteData?.b || undefined,
+            organization_id: searchParams.get('org') || undefined,
             role: inviteData?.r || undefined,
+            organization_name: inviteData ? undefined : organizationName,
             bureau_name: inviteData ? undefined : bureauName,
             status: inviteData ? 'approved' : 'pending' // Auto-approve invited users
           }
@@ -193,24 +196,47 @@ export const Register = () => {
                 </div>
 
                 {!inviteData && (
-                  <div className="space-y-1">
-                    <label htmlFor="bureau-name" className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Nom du Bureau / Organisation
-                    </label>
-                    <div className="relative group">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <Building2 className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label htmlFor="organization-name" className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Nom de l'Organisation
+                      </label>
+                      <div className="relative group">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <Building2 className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                        </div>
+                        <input
+                          id="organization-name"
+                          name="organizationName"
+                          type="text"
+                          required
+                          className="block w-full rounded-xl border-gray-200 py-3 pl-10 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm border transition-all"
+                          placeholder="Ex: Ministère de la Justice"
+                          value={organizationName}
+                          onChange={(e) => setOrganizationName(e.target.value)}
+                        />
                       </div>
-                      <input
-                        id="bureau-name"
-                        name="bureauName"
-                        type="text"
-                        required
-                        className="block w-full rounded-xl border-gray-200 py-3 pl-10 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm border transition-all"
-                        placeholder="Ex: Direction Générale"
-                        value={bureauName}
-                        onChange={(e) => setBureauName(e.target.value)}
-                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label htmlFor="bureau-name" className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Nom du 1er Bureau
+                      </label>
+                      <div className="relative group">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <Building2 className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                        </div>
+                        <input
+                          id="bureau-name"
+                          name="bureauName"
+                          type="text"
+                          required
+                          className="block w-full rounded-xl border-gray-200 py-3 pl-10 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm border transition-all"
+                          placeholder="Ex: Secrétariat Central"
+                          value={bureauName}
+                          onChange={(e) => setBureauName(e.target.value)}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

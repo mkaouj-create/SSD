@@ -13,11 +13,12 @@ export const BureausList = () => {
   const fetchBureaus = async () => {
     setLoading(true);
     try {
-      // Fetch bureaus with counts of users and dossiers
+      // Fetch bureaus with counts of users and dossiers, and organization info
       const { data, error } = await supabase
         .from('bureaus')
         .select(`
           *,
+          organizations(name),
           profiles(count),
           dossiers(count)
         `);
@@ -96,6 +97,11 @@ export const BureausList = () => {
                     <Building2 className="h-7 w-7 text-blue-600 group-hover:text-white transition-colors" />
                   </div>
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">ID: {bureau.id.substring(0, 8)}</span>
+                </div>
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                    {bureau.organizations?.name || 'Indépendante'}
+                  </span>
                 </div>
                 <h3 className="text-xl font-black text-gray-900 mb-1 tracking-tight">{bureau.name}</h3>
                 <p className="text-sm font-medium text-gray-500 mb-8">{bureau.email || 'Pas d\'email de contact'}</p>

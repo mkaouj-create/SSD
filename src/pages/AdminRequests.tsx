@@ -12,10 +12,9 @@ export const AdminRequests = () => {
     setLoading(true);
     try {
       // Fetch profiles that are pending validation
-      // We'll assume status field exists or use role='client' as a proxy for now
       const { data: pendingProfiles, error } = await supabase
         .from('profiles')
-        .select('*, bureaus(name)')
+        .select('*, bureaus(name), organizations(name)')
         .eq('status', 'pending');
 
       if (error) {
@@ -25,7 +24,8 @@ export const AdminRequests = () => {
       
       const enrichedRequests = (pendingProfiles || []).map(p => ({
         ...p,
-        bureau_name: p.bureaus ? p.bureaus.name : (p.requested_bureau_name || 'Bureau inconnu')
+        bureau_name: p.bureaus ? p.bureaus.name : (p.requested_bureau_name || 'Bureau inconnu'),
+        organization_name: p.organizations ? p.organizations.name : (p.requested_organization_name || 'Organisation inconnue')
       }));
 
       setRequests(enrichedRequests);
@@ -43,13 +43,23 @@ export const AdminRequests = () => {
   const handleApprove = async (req: any) => {
     const id = req.id;
     let requestedBureauName = req.requested_bureau_name || req.bureau_name;
+    let requestedOrgName = req.requested_organization_name || req.organization_name;
 
     console.log('Tentative d\'approbation pour:', req);
 
+    if (!requestedOrgName || requestedOrgName === 'Organisation inconnue') {
+      const manualOrg = window.prompt('Le nom de l\'organisation est manquant. Veuillez le saisir :', '');
+      if (!manualOrg || manualOrg.trim() === '') {
+        alert('Erreur : Un nom d\'organisation est obligatoire.');
+        return;
+      }
+      requestedOrgName = manualOrg.trim();
+    }
+
     if (!requestedBureauName || requestedBureauName === 'Bureau inconnu') {
-      const manualName = window.prompt('Le nom du bureau est manquant. Veuillez le saisir pour continuer :', '');
+      const manualName = window.prompt('Le nom du bureau est manquant. Veuillez le saisir :', '');
       if (!manualName || manualName.trim() === '') {
-        alert('Erreur : Un nom de bureau est obligatoire pour valider l\'inscription.');
+        alert('Erreur : Un nom de bureau est obligatoire.');
         return;
       }
       requestedBureauName = manualName.trim();
@@ -57,59 +67,67 @@ export const AdminRequests = () => {
 
     try {
       setLoading(true);
-      console.log('Approuvant la demande pour le bureau:', requestedBureauName);
       
-      // 1. Check if bureau exists or create it
+      // 1. Check if organization exists or create it
+      let finalOrgId = null;
+      const { data: existingOrg, error: orgSearchError } = await supabase
+        .from('organizations')
+        .select('id')
+        .eq('name', requestedOrgName)
+        .maybeSingle();
+
+      if (orgSearchError) throw orgSearchError;
+
+      if (existingOrg) {
+        finalOrgId = existingOrg.id;
+      } else {
+        const { data: newOrg, error: orgError } = await supabase
+          .from('organizations')
+          .insert([{ name: requestedOrgName }])
+          .select()
+          .single();
+        if (orgError) throw orgError;
+        finalOrgId = newOrg.id;
+      }
+
+      // 2. Check if bureau exists or create it
       let finalBureauId = null;
-      
       const { data: existingBureau, error: searchError } = await supabase
         .from('bureaus')
         .select('id')
         .eq('name', requestedBureauName)
+        .eq('organization_id', finalOrgId)
         .maybeSingle();
       
-      if (searchError) {
-        console.error('Erreur lors de la recherche du bureau:', searchError);
-        throw searchError;
-      }
+      if (searchError) throw searchError;
       
       if (existingBureau) {
-        console.log('Bureau existant trouvé:', existingBureau.id);
         finalBureauId = existingBureau.id;
       } else {
-        console.log('Création d\'un nouveau bureau:', requestedBureauName);
         const { data: newBureau, error: bureauError } = await supabase
           .from('bureaus')
-          .insert([{ name: requestedBureauName }])
+          .insert([{ name: requestedBureauName, organization_id: finalOrgId }])
           .select()
           .single();
         
-        if (bureauError) {
-          console.error('Erreur lors de la création du bureau:', bureauError);
-          throw bureauError;
-        }
+        if (bureauError) throw bureauError;
         finalBureauId = newBureau.id;
-        console.log('Nouveau bureau créé avec ID:', finalBureauId);
       }
 
-      // 2. Approve user and link to bureau
-      console.log('Mise à jour du profil utilisateur:', id, 'avec bureau_id:', finalBureauId);
+      // 3. Approve user and link to both
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ 
           status: 'approved', 
           role: 'admin',
-          bureau_id: finalBureauId 
+          bureau_id: finalBureauId,
+          organization_id: finalOrgId
         })
         .eq('id', id);
       
-      if (updateError) {
-        console.error('Erreur lors de la mise à jour du profil:', updateError);
-        throw updateError;
-      }
+      if (updateError) throw updateError;
       
-      console.log('Demande approuvée avec succès !');
-      alert('Demande approuvée avec succès pour le bureau : ' + requestedBureauName);
+      alert('Demande approuvée avec succès !');
       fetchRequests();
     } catch (error: any) {
       console.error('Error approving request:', error);
@@ -198,8 +216,9 @@ export const AdminRequests = () => {
                           <Building2 className="h-6 w-6 text-blue-600" />
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-black text-gray-900 tracking-tight">{req.bureau_name}</div>
-                          <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-0.5">{req.full_name || 'Sans nom'}</div>
+                          <div className="text-sm font-black text-gray-900 tracking-tight">{req.organization_name}</div>
+                          <div className="text-xs font-bold text-blue-600 mt-0.5">{req.bureau_name}</div>
+                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{req.full_name || 'Sans nom'}</div>
                         </div>
                       </div>
                     </td>
