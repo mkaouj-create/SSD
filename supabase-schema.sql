@@ -265,15 +265,29 @@ CREATE POLICY "Super Admin Full Access Notifications" ON public.notifications FO
 TO authenticated
 USING (get_current_user_role() = 'Super_admin');
 
-CREATE POLICY "Users view own organization" ON public.organizations FOR SELECT 
-TO authenticated
-USING (id = get_current_organization_id());
-
 CREATE POLICY "Super Admin Full Access Organizations" ON public.organizations FOR ALL 
 TO authenticated
 USING (get_current_user_role() = 'Super_admin');
 
--- Bureau Specific Policies
+CREATE POLICY "Users view own organization" ON public.organizations FOR SELECT 
+TO authenticated
+USING (id = get_current_organization_id());
+
+CREATE POLICY "Organization Admins Full Access Bureaus" ON public.bureaus FOR ALL 
+TO authenticated
+USING (
+    organization_id = get_current_organization_id()
+    AND 
+    get_current_user_role() = 'admin'
+);
+
+CREATE POLICY "Organization Admins Full Access Profiles" ON public.profiles FOR ALL 
+TO authenticated
+USING (
+    organization_id = get_current_organization_id()
+    AND 
+    get_current_user_role() = 'admin'
+);
 CREATE POLICY "Users view own bureau" ON public.bureaus FOR SELECT 
 TO authenticated
 USING (
@@ -282,12 +296,12 @@ USING (
     organization_id = get_current_organization_id()
 );
 
-CREATE POLICY "Users view profiles in same bureau" ON public.profiles FOR SELECT 
+CREATE POLICY "Users view profiles in same organization" ON public.profiles FOR SELECT 
 TO authenticated
 USING (
     id = auth.uid() 
     OR 
-    bureau_id = get_current_bureau_id()
+    organization_id = get_current_organization_id()
 );
 
 CREATE POLICY "Users update own profile" ON public.profiles FOR UPDATE 
