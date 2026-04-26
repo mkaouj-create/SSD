@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -18,11 +18,17 @@ interface DraftRow {
 }
 
 export const TableauDossier = () => {
-  const { bureauId, user } = useAuth();
+  const { bureauId, user, role } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (role === 'Super_admin') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [role, navigate]);
 
   const createEmptyRow = (): DraftRow => ({
     tempId: Math.random().toString(36).substr(2, 9),
