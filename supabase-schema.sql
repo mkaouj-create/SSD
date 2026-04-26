@@ -439,6 +439,7 @@ DROP TRIGGER IF EXISTS update_dossiers_modtime ON public.dossiers;
 CREATE TRIGGER update_dossiers_modtime BEFORE UPDATE ON public.dossiers FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- Function to allow Bureau Admins to delete shared links (Vaguemestre/Directeur) securely
+-- and for Super_admin to delete Admin users and all bureau info
 CREATE OR REPLACE FUNCTION public.delete_shared_user(target_user_id UUID)
 RETURNS void AS $$
 DECLARE
@@ -456,6 +457,25 @@ BEGIN
     SELECT bureau_id, role INTO v_target_bureau_id, v_target_role
     FROM public.profiles
     WHERE id = target_user_id;
+
+    -- Super_admin can delete admins and all their bureau information
+    IF v_caller_role = 'Super_admin' AND v_target_role = 'admin' THEN
+        -- Delete all auth accounts associated to this bureau
+        IF v_target_bureau_id IS NOT NULL THEN
+            -- Delete from auth.users for anyone in this bureau. 
+            -- This will CASCADE to public.profiles natively because of 'REFERENCES auth.users(id) ON DELETE CASCADE'.
+            DELETE FROM auth.users WHERE id IN (
+                SELECT id FROM public.profiles WHERE bureau_id = v_target_bureau_id
+            );
+            
+            -- Delete the bureau itself (cascades to dossiers, roles, transmissions, comments, audit_logs)
+            DELETE FROM public.bureaus WHERE id = v_target_bureau_id;
+        END IF;
+
+        -- If target bureau was null for some reason, just delete the target admin user
+        DELETE FROM auth.users WHERE id = target_user_id;
+        RETURN;
+    END IF;
 
     -- Verify caller is admin of the same bureau
     IF (v_caller_role IN ('admin', 'Super_admin')) AND (v_bureau_id = v_target_bureau_id) THEN

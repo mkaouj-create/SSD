@@ -60,8 +60,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .then(({ data: { session }, error }) => {
         if (error) {
           console.error('Supabase getSession error:', error);
-          if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token')) {
+          if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token') || error.message?.includes('Invalid Refresh Token')) {
             clearSupabaseData();
+            setIsLoading(false);
+            return;
           }
         }
         setSession(session);
@@ -73,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .catch(err => {
         console.error('Supabase getSession error:', err);
-        if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh token')) {
+        if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh token') || err?.message?.includes('Invalid Refresh Token')) {
           clearSupabaseData();
         }
         setIsLoading(false);
@@ -84,6 +86,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (event === 'TOKEN_REFRESH_FAILED') {
         console.error('TOKEN_REFRESH_FAILED: Clearing session');
         clearSupabaseData();
+        setSession(null);
+        setUserProfile(null);
+        setPermissions([]);
+        setIsLoading(false);
+        return;
       }
       setSession(session);
       if (session) {
@@ -107,7 +114,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token') || error.message?.includes('Invalid Refresh Token')) {
+          await clearSupabaseData();
+          setSession(null);
+          setIsLoading(false);
+          return;
+        }
+        throw error;
+      }
 
       if (data) {
         // Normalize Super_admin role to avoid case sensitivity issues
@@ -146,7 +161,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .or(`bureau_id.is.null,bureau_id.eq.${bureauId}`)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        // Just log out the error, don't throw to avoid crashing
+        console.error('Error fetching permissions mapping:', error);
+      }
 
       if (data) {
         setPermissions(data.permissions || []);

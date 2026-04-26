@@ -10,6 +10,8 @@ export const PendingApproval = () => {
     setRefreshing(true);
     await refreshProfile();
     setRefreshing(false);
+    
+    // Check local storage or wait for rerender - but we can just let App.tsx handle it when userProfile is updated by refreshProfile
   };
 
   return (

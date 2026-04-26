@@ -117,7 +117,27 @@ export const BureausList = () => {
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-50/50 px-8 py-4 flex justify-end border-t border-gray-50">
+              <div className="bg-gray-50/50 px-8 py-4 flex justify-between items-center border-t border-gray-50">
+                <button 
+                  onClick={async () => {
+                    const confirm = window.confirm(`Êtes-vous certain de vouloir supprimer le bureau "${bureau.name}" ? TOUS les dossiers, utilisateurs et données associés seront définitivement supprimés.`);
+                    if(confirm) {
+                      setLoading(true);
+                      try {
+                        const {error} = await supabase.from('bureaus').delete().eq('id', bureau.id);
+                        if(error) throw error;
+                        fetchBureaus();
+                      } catch(e: any) {
+                        alert("Erreur: " + e.message);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }
+                  }}
+                  className="text-red-600 hover:text-red-700 text-xs font-black uppercase tracking-widest inline-flex items-center transition-colors"
+                >
+                  Supprimer le bureau
+                </button>
                 <button className="text-blue-600 hover:text-blue-700 text-xs font-black uppercase tracking-widest inline-flex items-center transition-colors">
                   Gérer <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
                 </button>

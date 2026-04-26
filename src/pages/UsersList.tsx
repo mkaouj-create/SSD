@@ -201,19 +201,36 @@ export const UsersList = () => {
 
   const handleDeleteUser = async () => {
     if (showDeleteModal) {
+      setLoading(true);
       try {
-        const { error } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', showDeleteModal);
-        
-        if (error) throw error;
+        if (role === 'Super_admin') {
+          // Verify caller is Super_admin before calling delete_shared_user
+           const { error } = await supabase.rpc('delete_shared_user', { target_user_id: showDeleteModal });
+           if (error) {
+              console.error('Error invoking delete_shared_user RPC:', error);
+              // fallback to standard delete if RPC fails
+              const { error: profileError } = await supabase.from('profiles').delete().eq('id', showDeleteModal);
+              if(profileError) throw profileError;
+              
+              // And attempt auth.users deletion if possible (usually blocked by RLS from client though)
+              await supabase.auth.admin?.deleteUser(showDeleteModal).catch(() => {});
+           }
+        } else {
+          const { error } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', showDeleteModal);
+          
+          if (error) throw error;
+        }
         
         setShowDeleteModal(null);
         fetchUsers();
-      } catch (error) {
-        console.error('Error deleting user profile:', error);
-        alert('Erreur lors de la suppression du profil.');
+      } catch (error: any) {
+        console.error('Error deleting user:', error);
+        alert(`Erreur lors de la suppression de l'utilisateur: ${error.message || 'Erreur inconnue'}`);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -490,20 +507,24 @@ export const UsersList = () => {
               <h3 className="text-xl font-bold">Supprimer l'accès</h3>
             </div>
             <p className="text-gray-600 leading-relaxed">
-              Êtes-vous certain de vouloir révoquer l'accès de cet utilisateur ? Cette action est immédiate et l'utilisateur ne pourra plus se connecter.
+              {role === 'Super_admin' && users.find(u => u.id === showDeleteModal)?.role === 'admin' 
+                ? "Attention ! Vous êtes sur le point de supprimer un compte Administrateur de Bureau. Cela entraînera la suppression définitive de son Bureau, ainsi que de TOUS les profils, rôles et dossiers qui y sont associés. Êtes-vous absolument sûr ?"
+                : "Êtes-vous certain de vouloir révoquer l'accès de cet utilisateur ? Cette action est immédiate et l'utilisateur ne pourra plus se connecter."}
             </p>
             <div className="mt-8 flex justify-end space-x-3">
               <button
                 onClick={() => setShowDeleteModal(null)}
                 className="px-6 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                disabled={loading}
               >
                 Annuler
               </button>
               <button
                 onClick={handleDeleteUser}
-                className="px-6 py-2.5 rounded-xl border border-transparent bg-red-600 text-sm font-bold text-white hover:bg-red-700 shadow-md transition-all"
+                disabled={loading}
+                className="px-6 py-2.5 rounded-xl border border-transparent bg-red-600 text-sm font-bold text-white hover:bg-red-700 shadow-md transition-all disabled:opacity-50"
               >
-                Confirmer la suppression
+                {loading ? 'Suppression...' : 'Confirmer la suppression'}
               </button>
             </div>
           </div>
