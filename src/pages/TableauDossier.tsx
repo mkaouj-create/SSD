@@ -167,42 +167,7 @@ export const TableauDossier = () => {
         throw new Error("La 'Date d'arrivée' est obligatoire pour chaque dossier rempli.");
       }
 
-      // 3. Duplicate check for valid rows with a numero_enregistrement
-      const rowsWithEnreg = validRows.filter(r => r.numero_enregistrement.trim() !== '');
-      if (rowsWithEnreg.length > 0) {
-        // Find existing within the table itself to prevent duplicates within the entry form
-        const seen = new Set();
-        for (const r of rowsWithEnreg) {
-          const year = r.date_arrivee.substring(0, 4);
-          const key = `${r.numero_enregistrement.trim()}-${year}`;
-          if (seen.has(key)) {
-             throw new Error(`Doublons détectés dans le tableau pour le N° Enregistrement "${r.numero_enregistrement}" en ${year}.`);
-          }
-          seen.add(key);
-        }
-
-        // Find existing in database
-        const orConditions = rowsWithEnreg
-          .map(r => {
-             const year = r.date_arrivee.substring(0, 4);
-             return `and(numero_enregistrement.eq."${r.numero_enregistrement.trim()}",date_arrivee.gte."${year}-01-01",date_arrivee.lte."${year}-12-31")`;
-          })
-          .join(',');
-          
-        const { data: duplicates, error: selectError } = await supabase
-          .from('dossiers')
-          .select('numero_enregistrement, date_arrivee')
-          .eq('bureau_id', bureauId)
-          .or(orConditions);
-
-        if (selectError) throw selectError;
-
-        if (duplicates && duplicates.length > 0) {
-           const dupNames = duplicates.map(d => `${d.numero_enregistrement} (${d.date_arrivee.substring(0, 4)})`).join(', ');
-           throw new Error(`Dossiers existants détectés : ${dupNames}. Un dossier avec ce Numéro d'Enregistrement existe déjà pour cette année.`);
-        }
-      }
-
+      // 3. (Duplicate check removed to allow duplicates for the Doublons view)
       // 4. Prepare data for Supabase
       const dossiersToInsert = validRows.map(row => {
         const year = new Date().getFullYear();

@@ -127,13 +127,6 @@ export const DossiersList = () => {
         {hasPermission('manage_dossiers') && role !== 'Secrétaire Départ' && (
           <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex items-center gap-3">
             <Link
-              to="/dossiers/import"
-              className="inline-flex items-center justify-center rounded-xl border-2 border-blue-600 bg-white px-5 py-2.5 text-sm font-bold text-blue-600 shadow-sm hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
-            >
-              <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              Importer (Excel)
-            </Link>
-            <Link
               to="/dossiers/new"
               className="inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all transform hover:-translate-y-0.5"
             >
