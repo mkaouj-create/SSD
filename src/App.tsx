@@ -28,10 +28,25 @@ import { TableauDossier } from './pages/TableauDossier';
 import { AuditLogs } from './pages/AuditLogs';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { session, isLoading, status, user } = useAuth();
+  const { session, isLoading, status, user, fetchError } = useAuth();
 
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-gray-50 p-4 text-center">
+        <h2 className="text-2xl font-bold text-red-600">Erreur de chargement de profil</h2>
+        <p className="mt-2 text-gray-600">{fetchError}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-4 text-white bg-blue-600 px-4 py-2 rounded-xl hover:bg-blue-700"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
   }
 
   if (!session) {

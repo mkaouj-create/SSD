@@ -14,6 +14,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  fetchError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   signOut: async () => {},
   refreshProfile: async () => {},
+  fetchError: null,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -36,6 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userProfile, setUserProfile] = useState<any>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const clearSupabaseData = async () => {
     try {
@@ -96,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
+    setFetchError(null);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -122,9 +126,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setUserProfile(null);
         setPermissions([]);
+        setFetchError('Profile data is null (maybeSingle returned nothing). userId: ' + userId);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching user profile:', error);
+      setFetchError(error.message || 'Unknown error');
     } finally {
       setIsLoading(false);
     }
@@ -212,7 +218,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isLoading, 
       login,
       signOut,
-      refreshProfile
+      refreshProfile,
+      fetchError
     }}>
       {children}
     </AuthContext.Provider>
