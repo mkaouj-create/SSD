@@ -17,28 +17,33 @@ export const DoublonsList = () => {
   }, [bureauId]);
 
   const fetchDuplicates = async () => {
-    if (!bureauId) return;
+    if (!bureauId && role !== 'Super_admin') return;
     setLoading(true);
     try {
       // Fetch all dossiers that have a numero_enregistrement
-      const { data, error } = await supabase
+      let query = supabase
         .from('dossiers')
-        .select('*')
-        .eq('bureau_id', bureauId)
+        .select('*, bureaus(name)')
         .neq('numero_enregistrement', '')
         .not('numero_enregistrement', 'is', null)
         .order('date_arrivee', { ascending: false });
 
+      if (role !== 'Super_admin') {
+        query = query.eq('bureau_id', bureauId);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
 
       if (data) {
-        // Group by N° Enregistrement + Year
+        // Group by Bureau + N° Enregistrement + Year
         const groups = new Map<string, any[]>();
 
         data.forEach(dossier => {
           if (!dossier.numero_enregistrement || !dossier.date_arrivee) return;
           const year = dossier.date_arrivee.substring(0, 4);
-          const key = `${dossier.numero_enregistrement.trim().toLowerCase()}-${year}`;
+          const key = `${dossier.bureau_id}-${dossier.numero_enregistrement.trim().toLowerCase()}-${year}`;
           
           if (!groups.has(key)) {
             groups.set(key, []);
@@ -113,7 +118,7 @@ export const DoublonsList = () => {
                        {group.length} Doublons trouvés
                      </span>
                      <h3 className="text-lg font-bold text-gray-900">
-                        N° {numEnreg} (Année {year})
+                        N° {numEnreg} (Année {year}) {role === 'Super_admin' && group[0].bureaus?.name ? `- Bureau: ${group[0].bureaus.name}` : ''}
                      </h3>
                   </div>
                 </div>
@@ -122,6 +127,7 @@ export const DoublonsList = () => {
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
+                        {role === 'Super_admin' && <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Bureau</th>}
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Tracking Code</th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date d'arrivée</th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Objet</th>
@@ -133,6 +139,13 @@ export const DoublonsList = () => {
                     <tbody className="divide-y divide-gray-100">
                       {group.map((dossier) => (
                         <tr key={dossier.id} className="hover:bg-gray-50/50 transition-colors">
+                          {role === 'Super_admin' && (
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-sm font-medium text-gray-900 border border-gray-200 px-2 py-1 rounded bg-gray-50">
+                                {dossier.bureaus?.name || 'Inconnu'}
+                              </span>
+                            </td>
+                          )}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm font-medium text-gray-900 font-mono">
                               {dossier.tracking_code}

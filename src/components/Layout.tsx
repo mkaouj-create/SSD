@@ -177,8 +177,10 @@ export const Layout = () => {
     { name: 'Journal d\'Audit', href: '/audit-logs', icon: Activity },
     { name: 'Paramètres', href: '/settings', icon: Settings },
   ].filter(item => {
-    // Masquer Tableau dossier et Doublons pour les rôles qui ne gèrent pas les dossiers ou le Super_admin
-    if ((item.name === 'Saisie (Tableau)' || item.name === 'Doublons') && (!hasPermission('manage_dossiers') || role === 'Super_admin')) return false;
+    // Masquer Tableau dossier pour les rôles qui ne gèrent pas les dossiers ou le Super_admin
+    if (item.name === 'Saisie (Tableau)' && (!hasPermission('manage_dossiers') || role === 'Super_admin')) return false;
+    // Masquer Doublons pour les rôles qui ne gèrent pas les dossiers (mais visible pour Super_admin s'il a la permission)
+    if (item.name === 'Doublons' && !hasPermission('manage_dossiers')) return false;
     // Masquer "Équipe" pour les admins et secrétaire arrivée/départ sur demande utilisateur
     if ((role === 'admin' || role === 'Secrétaire Arrivée' || role === 'Secrétaire Départ') && item.name === 'Équipe') return false;
     // Secrétaire arrivée/départ ne voit pas les utilisateurs, statistiques, journal d'audit et paramètres
