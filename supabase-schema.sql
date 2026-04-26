@@ -1,29 +1,18 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Organizations Table
-CREATE TABLE IF NOT EXISTS public.organizations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL,
-    email TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 2. Bureaus Table (Tenants)
+-- 1. Bureaus Table (Tenants)
 CREATE TABLE IF NOT EXISTS public.bureaus (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     email TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. Profiles Table (Extends Supabase Auth)
+-- 2. Profiles Table (Extends Supabase Auth)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    organization_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL,
     bureau_id UUID REFERENCES public.bureaus(id) ON DELETE SET NULL,
     full_name TEXT,
     email TEXT NOT NULL,
@@ -31,7 +20,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     status TEXT NOT NULL DEFAULT 'pending', -- pending, approved, rejected
     is_active BOOLEAN DEFAULT true,
     requested_bureau_name TEXT,
-    requested_organization_name TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -153,7 +141,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_bureau_id ON public.audit_logs(bureau_
 CREATE INDEX IF NOT EXISTS idx_notifications_bureau_id ON public.notifications(bureau_id);
 
 -- Enable Row Level Security
-ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bureaus ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
@@ -175,16 +162,6 @@ DECLARE
 BEGIN
     SELECT bureau_id INTO bid FROM public.profiles WHERE id = auth.uid();
     RETURN bid;
-END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
-
-CREATE OR REPLACE FUNCTION get_current_organization_id()
-RETURNS UUID AS $$
-DECLARE
-    oid UUID;
-BEGIN
-    SELECT organization_id INTO oid FROM public.profiles WHERE id = auth.uid();
-    RETURN oid;
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
 
@@ -265,43 +242,17 @@ CREATE POLICY "Super Admin Full Access Notifications" ON public.notifications FO
 TO authenticated
 USING (get_current_user_role() = 'Super_admin');
 
-CREATE POLICY "Super Admin Full Access Organizations" ON public.organizations FOR ALL 
-TO authenticated
-USING (get_current_user_role() = 'Super_admin');
-
-CREATE POLICY "Users view own organization" ON public.organizations FOR SELECT 
-TO authenticated
-USING (id = get_current_organization_id());
-
-CREATE POLICY "Organization Admins Full Access Bureaus" ON public.bureaus FOR ALL 
-TO authenticated
-USING (
-    organization_id = get_current_organization_id()
-    AND 
-    get_current_user_role() = 'admin'
-);
-
-CREATE POLICY "Organization Admins Full Access Profiles" ON public.profiles FOR ALL 
-TO authenticated
-USING (
-    organization_id = get_current_organization_id()
-    AND 
-    get_current_user_role() = 'admin'
-);
+-- Bureau Specific Policies
 CREATE POLICY "Users view own bureau" ON public.bureaus FOR SELECT 
 TO authenticated
-USING (
-    id = get_current_bureau_id()
-    OR
-    organization_id = get_current_organization_id()
-);
+USING (id = get_current_bureau_id());
 
-CREATE POLICY "Users view profiles in same organization" ON public.profiles FOR SELECT 
+CREATE POLICY "Users view profiles in same bureau" ON public.profiles FOR SELECT 
 TO authenticated
 USING (
     id = auth.uid() 
     OR 
-    organization_id = get_current_organization_id()
+    bureau_id = get_current_bureau_id()
 );
 
 CREATE POLICY "Users update own profile" ON public.profiles FOR UPDATE 
@@ -444,22 +395,18 @@ BEGIN
         full_name, 
         email, 
         requested_bureau_name, 
-        requested_organization_name,
         status, 
         role,
-        bureau_id,
-        organization_id
+        bureau_id
     )
     VALUES (
         NEW.id,
         NEW.raw_user_meta_data->>'full_name',
         NEW.email,
         NEW.raw_user_meta_data->>'bureau_name',
-        NEW.raw_user_meta_data->>'organization_name',
         COALESCE(NEW.raw_user_meta_data->>'status', 'pending'),
         COALESCE(NEW.raw_user_meta_data->>'role', 'client'),
-        NULLIF(NEW.raw_user_meta_data->>'bureau_id', '')::UUID,
-        NULLIF(NEW.raw_user_meta_data->>'organization_id', '')::UUID
+        NULLIF(NEW.raw_user_meta_data->>'bureau_id', '')::UUID
     );
     RETURN NEW;
 END;

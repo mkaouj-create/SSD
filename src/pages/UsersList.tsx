@@ -4,7 +4,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
 import { Plus, Trash2, Shield, User as UserIcon, AlertTriangle } from 'lucide-react';
 
 export const UsersList = () => {
-  const { bureauId, organizationId, role, user: currentUser, hasPermission } = useAuth();
+  const { bureauId, role, user: currentUser, hasPermission } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([
     { id: '1', name: 'admin' },
@@ -19,9 +19,9 @@ export const UsersList = () => {
   const [inviteRoleName, setInviteRoleName] = useState('Secrétaire Arrivée');
   
   const generateInviteLink = (inviteRole: string) => {
-    if (!bureauId || !organizationId) return;
+    if (!bureauId) return;
     const baseUrl = window.location.origin;
-    const params = btoa(unescape(encodeURIComponent(JSON.stringify({ b: bureauId, o: organizationId, r: inviteRole }))));
+    const params = btoa(unescape(encodeURIComponent(JSON.stringify({ b: bureauId, r: inviteRole }))));
     const link = `${baseUrl}/register?invite=${params}`;
     setInviteLink(link);
     setInviteRoleName(inviteRole);

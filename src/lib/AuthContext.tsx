@@ -8,8 +8,6 @@ interface AuthContextType {
   status: string | null;
   bureauId: string | null;
   bureauName: string | null;
-  organizationId: string | null;
-  organizationName: string | null;
   permissions: string[];
   hasPermission: (perm: string) => boolean;
   isLoading: boolean;
@@ -25,8 +23,6 @@ const AuthContext = createContext<AuthContextType>({
   status: null,
   bureauId: null,
   bureauName: null,
-  organizationId: null,
-  organizationName: null,
   permissions: [],
   hasPermission: () => false,
   isLoading: true,
@@ -41,10 +37,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const clearSupabaseData = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error('Error during automatic signout:', e);
+    }
+    // As a fallback, clear local storage items related to Supabase
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        localStorage.removeItem(key);
+      }
+    });
+  };
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('Supabase getSession error:', error);
+          if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token')) {
+            clearSupabaseData();
+          }
+        }
         setSession(session);
         if (session) {
           fetchUserProfile(session.user.id);
@@ -54,11 +70,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .catch(err => {
         console.error('Supabase getSession error:', err);
+        if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh token')) {
+          clearSupabaseData();
+        }
         setIsLoading(false);
       });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESH_FAILED') {
+        console.error('TOKEN_REFRESH_FAILED: Clearing session');
+        clearSupabaseData();
+      }
       setSession(session);
       if (session) {
         fetchUserProfile(session.user.id);
@@ -76,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*, bureaus(name), organizations(name)')
+        .select('*, bureaus(name)')
         .eq('id', userId)
         .maybeSingle();
 
@@ -184,8 +207,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       status: userProfile?.status || null,
       bureauId: userProfile?.bureau_id || null, 
       bureauName: userProfile?.bureaus?.name || null,
-      organizationId: userProfile?.organization_id || null,
-      organizationName: userProfile?.organizations?.name || null,
       permissions,
       hasPermission,
       isLoading, 
