@@ -128,7 +128,7 @@ export const BureausList = () => {
     );
   }
 
-  const BureauCard = ({ bureau }: { bureau: any }) => (
+  const BureauCard: React.FC<{ bureau: any }> = ({ bureau }) => (
     <div className="bg-white rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all overflow-hidden group transform hover:-translate-y-1">
       <div className="p-8">
         <div className="flex items-center justify-between mb-6">
@@ -336,7 +336,7 @@ export const BureausList = () => {
       ) : (
         role === 'Super_admin' ? (
           <div className="space-y-12">
-            {Object.entries(groupedBureaus).map(([orgName, orgBureaus]) => (
+            {Object.entries(groupedBureaus).map(([orgName, orgBureaus]: [string, any[]]) => (
               <div key={orgName} className="bg-white/50 rounded-3xl p-6 border border-gray-100">
                 <div className="flex items-center mb-6">
                   <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center mr-4">

@@ -46,7 +46,7 @@ export const Register = () => {
           data: {
             full_name: fullName,
             bureau_id: inviteData?.b || undefined,
-            organization_id: searchParams.get('org') || undefined,
+            organization_id: inviteData?.o || searchParams.get('org') || undefined,
             role: inviteData?.r || undefined,
             organization_name: inviteData ? undefined : organizationName,
             bureau_name: inviteData ? undefined : bureauName,
