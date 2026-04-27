@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Calendar, Building, Activity, Download, Filter, X, FolderOpen } from 'lucide-react';
@@ -8,6 +9,7 @@ import { extractServices } from '../lib/orientationUtils';
 
 export const Statistics = () => {
   const { bureauId, role, user, bureauName } = useAuth();
+  const navigate = useNavigate();
   const [dossiers, setDossiers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -404,7 +406,11 @@ export const Statistics = () => {
               </thead>
               <tbody>
                 {filteredDossiers.map((d) => (
-                  <tr key={d.id} className="bg-white hover:bg-blue-50/50 transition-all group">
+                  <tr 
+                    key={d.id} 
+                    className="bg-white hover:bg-blue-50/50 transition-all group cursor-pointer"
+                    onClick={() => navigate(`/dossiers/${d.id}?readonly=true`)}
+                  >
                     <td className="px-4 py-4 font-bold text-blue-600 border-y border-l border-gray-50 rounded-l-2xl">
                       {d.tracking_code}
                     </td>

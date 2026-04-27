@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, Clock, FileText, Edit, Trash2, AlertTriangle, MessageSquare, Activity, User, X } from 'lucide-react';
@@ -16,6 +16,8 @@ const statusColors: Record<string, string> = {
 
 export const DossierDetails = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const isReadOnly = searchParams.get('readonly') === 'true';
   const { bureauId, role, user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [dossier, setDossier] = useState<any>(null);
@@ -206,6 +208,7 @@ export const DossierDetails = () => {
   };
 
   const canEditDossier = () => {
+    if (isReadOnly) return false;
     if (role === 'admin' || role === 'Super_admin' || role === 'Secrétaire') return true;
     if (role === 'Secrétaire Arrivée') return (dossier.type_dossier === 'Arrivée' && dossier.statut !== 'Transmis');
     if (role === 'Secrétaire Départ') return (dossier.type_dossier === 'Départ' || dossier.statut === 'Transmis');
@@ -213,6 +216,7 @@ export const DossierDetails = () => {
   };
 
   const canTransmitDossier = () => {
+    if (isReadOnly) return false;
     if (role === 'admin' || role === 'Super_admin' || role === 'Secrétaire') return true;
     if (role === 'Secrétaire Départ') return (dossier.type_dossier === 'Arrivée' && dossier.statut !== 'Transmis');
     return false;
@@ -294,9 +298,9 @@ export const DossierDetails = () => {
       )}
 
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <Link to="/dossiers" className="inline-flex items-center text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors">
+        <Link to={isReadOnly ? "/statistics" : "/dossiers"} className="inline-flex items-center text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Retour à la liste
+          {isReadOnly ? "Retour aux statistiques" : "Retour à la liste"}
         </Link>
         <div className="flex items-center space-x-3">
           {hasPermission('manage_dossiers') && (
