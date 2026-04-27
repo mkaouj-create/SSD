@@ -204,7 +204,11 @@ export const Layout = () => {
       {/* Sidebar for desktop */}
       <div className="hidden md:fixed md:inset-y-0 md:flex md:w-72 md:flex-col">
         <div className="flex flex-grow flex-col overflow-y-auto border-r border-gray-100 bg-white pt-8 px-4">
-          <div className="flex flex-shrink-0 items-center px-4 mb-10">
+          <div 
+            className="flex flex-shrink-0 items-center px-4 mb-10 cursor-pointer"
+            onClick={() => window.location.reload()}
+            title="Rafraîchir l'application"
+          >
             <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-blue-200">
               <span className="text-white font-black text-xl">S</span>
             </div>
@@ -267,7 +271,11 @@ export const Layout = () => {
       {/* Mobile header */}
       <div className="sticky top-0 z-20 flex flex-col flex-shrink-0 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 md:hidden">
         <div className="flex h-14 items-center justify-between px-4">
-          <div className="flex items-center">
+          <div 
+            className="flex items-center cursor-pointer"
+            onClick={() => window.location.reload()}
+            title="Rafraîchir l'application"
+          >
             <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center mr-2 shadow-md shadow-blue-100">
               <span className="text-white font-black text-sm">S</span>
             </div>
@@ -435,7 +443,11 @@ export const Layout = () => {
         <div className="md:hidden fixed inset-0 z-50">
           <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
           <div className="relative w-full max-w-xs bg-white h-full shadow-2xl p-6 flex flex-col">
-            <div className="flex items-center mb-10">
+            <div 
+              className="flex items-center mb-10 cursor-pointer"
+              onClick={() => window.location.reload()}
+              title="Rafraîchir l'application"
+            >
               <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center mr-3">
                 <span className="text-white font-black text-xl">S</span>
               </div>
