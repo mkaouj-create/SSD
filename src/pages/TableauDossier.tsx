@@ -169,10 +169,11 @@ export const TableauDossier = () => {
 
       // 3. (Duplicate check removed to allow duplicates for the Doublons view)
       // 4. Prepare data for Supabase
-      const dossiersToInsert = validRows.map(row => {
+      const dossiersToInsert = validRows.map((row, index) => {
         const year = new Date().getFullYear();
-        const randomNum = Math.floor(1000 + Math.random() * 9000);
-        const trackingCode = `SSD-${year}-${randomNum}`;
+        // Generate a more robust unique code: timestamp part + random alphanumeric
+        const uniquePart = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const trackingCode = `SSD-${year}-${uniquePart}`;
         const finalStatus = row.type_dossier === 'Départ' ? 'Transmis' : 'Reçu';
 
         return {

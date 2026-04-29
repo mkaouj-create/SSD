@@ -46,10 +46,10 @@ export const NewDossier = () => {
         }
       }
 
-      // Auto-generate tracking code: SSD-YYYY-XXXX
+      // Auto-generate tracking code: SSD-YYYY-XXXXXX
       const year = new Date().getFullYear();
-      const randomNum = Math.floor(1000 + Math.random() * 9000);
-      const generatedTrackingCode = `SSD-${year}-${randomNum}`;
+      const uniquePart = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const generatedTrackingCode = `SSD-${year}-${uniquePart}`;
 
       const { error } = await supabase
         .from('dossiers')
